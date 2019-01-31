@@ -1,0 +1,20 @@
+{
+  "name" : "shlex",
+  "description" : "Simple shell-like lexical analysis library",
+  "homepage" : "https://github.com/vporton/shlex-dlang",
+  "license" : "GPL-3.0",
+  "authors" : [
+    "Victor Porton"
+  ],
+  "targetType" : "library",
+  "configurations": [
+    {
+      "name": "shared-library",
+      "targetType": "dynamicLibrary"
+    },
+    {
+      "name": "static-library",
+      "targetType": "staticLibrary"
+    }
+  ]
+}
