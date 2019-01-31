@@ -21,12 +21,32 @@ This code was a rewrite of a Python 3.7 module with the same name:
 Copyright © 2001-2019 Python Software Foundation; All Rights Reserved
 */
 
-class shlex:
-    "A lexical analyzer class for simple shell-like syntaxes."
-    def __init__(self, instream=None, infile=None, posix=False,
-                 punctuation_chars=False):
-        if isinstance(instream, str):
-            instream = StringIO(instream)
+module shlex;
+
+import std.string;
+
+/// A lexical analyzer class for simple shell-like syntaxes
+struct Shlex {
+    private InputRange!string instream;
+
+    this(string instream, Nullable!string infile, bool posix=false, punctuation_chars=false) {
+        // It would be more efficient to use incremental splitting
+        this(inputRangeObject(instream.lineSplitter), infile, posix, punctuation_chars);
+    }
+
+    this(Stream)(InputRange!string instream,
+                 Nullable!string infile,
+                 bool posix=false,
+                 punctuation_chars=false)
+    {
+        this(inputRangeObject(instream), infile, posix, punctuation_chars);
+    }
+
+    this(InputRange!string instream,
+         Nullable!string infile,
+         bool posix=false,
+         punctuation_chars=false)
+    {
         if instream is not None:
             self.instream = instream
             self.infile = infile
