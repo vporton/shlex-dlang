@@ -56,7 +56,7 @@ private:
     uint lineno;
     ubyte debug_ = 0;
     string token = "";
-    auto filestack = DList(); // may be not the fastest
+    auto filestack = DList!(Tuple(Nullable!string, ShlexStream, uint)); // may be not the fastest
     Nullable!string source; // TODO: Represent no source just as an empty string?
     string punctuation_chars;
     // _pushback_chars is a push back queue used by lookahead logic
@@ -101,25 +101,31 @@ public:
         }
     }
 
-    def push_token(self, tok):
-        "Push a token onto the stack popped by the get_token method"
-        if self.debug >= 1:
-            print("shlex: pushing token " + repr(tok))
-        self.pushback.appendleft(tok)
+    /** Push a token onto the stack popped by the get_token method */
+    void push_token(tok) {
+        if (debug_ >= 1)
+            writeln("shlex: pushing token " ~ tok); // FIXME: need toString?
+        pushback.insertFront(tok);
+    }
 
-    def push_source(self, newstream, newfile=None):
-        "Push an input source onto the lexer's input source stack."
-        if isinstance(newstream, str):
-            newstream = StringIO(newstream)
-        self.filestack.appendleft((self.infile, self.instream, self.lineno))
-        self.infile = newfile
-        self.instream = newstream
-        self.lineno = 1
-        if self.debug:
-            if newfile is not None:
-                print('shlex: pushing to file %s' % (self.infile,))
-            else:
-                print('shlex: pushing to stream %s' % (self.instream,))
+    /** Push an input source onto the lexer's input source stack. */
+    void push_source(Stream)(Stream newstream, Nullable!string newfile = Nullable!string()) {
+        push_source(inputRangeObject(instream), newfile);
+    }
+
+    /** Push an input source onto the lexer's input source stack. */
+    void push_source(ShlexStream newstream, Nullable!string newfile = Nullable!string()) {
+        filestack.insertFront(tuple(this.infile, this.instream, this.lineno));
+        this.infile = newfile;
+        this.instream = newstream;
+        this.lineno = 1;
+        if (debug_) {
+            if (newfile.isNull)
+                writeln("shlex: pushing to stream %s".format(this.instream));
+            else
+                writeln("shlex: pushing to file %s".format(this.infile));
+        }
+    }
 
     def pop_source(self):
         "Pop the input source stack."
