@@ -40,7 +40,7 @@ struct Shlex {
     alias PunctuationChars = Flag!"punctuationChars";
 
 private:
-    // TODO: Python shlex has some of the following as public instance variables
+    // TODO: Python shlex has some of the following as public instance variables (also check visibility of member functions)
     ShlexStream instream;
     Nullable!string infile;
     Posix posix;
@@ -127,14 +127,18 @@ public:
         }
     }
 
-    def pop_source(self):
-        "Pop the input source stack."
-        self.instream.close()
-        (self.infile, self.instream, self.lineno) = self.filestack.popleft()
-        if self.debug:
-            print('shlex: popping to %s, line %d' \
-                  % (self.instream, self.lineno))
-        self.state = ' '
+    /** Pop the input source stack. */
+    void pop_source() {
+        (cast(File)instream).close(); // a little messy
+        // use a tuple library?
+        immutable t = filestack.popFirstOf();
+        infile   = t[0];
+        instream = t[1];
+        lineno   = t[2];
+        if (debug_)
+            writeln("shlex: popping to %s, line %d".format(instream, lineno));
+        state = ' ';
+    }
 
     def get_token(self):
         "Get a token from the input stream (or from stack if it's nonempty)"
