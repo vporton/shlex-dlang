@@ -42,6 +42,7 @@ private void skipLine(ShlexStream stream) {
 struct Shlex {
     alias Posix = Flag!"posix";
     alias PunctuationChars = Flag!"punctuationChars";
+    alias Comments = Flag!"comments";
 
 private:
     // TODO: Python shlex has some of the following as public instance variables (also check visibility of member functions)
@@ -49,6 +50,7 @@ private:
     Nullable!string infile;
     Posix posix;
     delegate isEof(string token);
+    string commenters = "#";
     string wordchars;
     static immutable whitespace = " \t\r\n";
     bool whitespace_split = false;
@@ -90,7 +92,6 @@ public:
         //    self.eof = None
         //else:
         //    self.eof = ''
-        //self.commenters = '#'
         wordchars = "abcdfeghijklmnopqrstuvwxyz" ~ "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
         if (posix)
             wordchars ~= "ßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" ~ "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ";
@@ -343,66 +344,74 @@ public:
         return result;
     }
 
-    def sourcehook(self, newfile):
-        "Hook called on a filename to be sourced."
-        if newfile[0] == '"':
-            newfile = newfile[1:-1]
-        # This implements cpp-like semantics for relative-path inclusion.
-        if isinstance(self.infile, str) and not os.path.isabs(newfile):
-            newfile = os.path.join(os.path.dirname(self.infile), newfile)
-        return (newfile, open(newfile, "r"))
+    /** Hook called on a filename to be sourced.*/
+    auto sourcehook(string newfile):
+        if (newfile[0] == '"')
+            newfile = newfile[1..$-1]'
+        // This implements cpp-like semantics for relative-path inclusion.
+        if (!isAbsolute(newfile))
+            newfile = buildPath(dirName(infile), newfile);
+        return tuple(newfile, File(newfile, "r"));
 
-    def error_leader(self, infile=None, lineno=None):
-        "Emit a C-compiler-like, Emacs-friendly error-message leader."
-        if infile is None:
-            infile = self.infile
-        if lineno is None:
-            lineno = self.lineno
-        return "\"%s\", line %d: " % (infile, lineno)
+    /** Emit a C-compiler-like, Emacs-friendly error-message leader. */
+    string error_leader(Nullable!string infile = Nullable!string(),
+                        Nullable!uint lineno=Nullable!uint())
+    {
+        if (infile.isNull)
+            infile = this.infile;
+        if (lineno.isNull)
+            lineno = this.lineno;
+        return "\"%s\", line %d: ".format(infile, lineno);
+    }
 
-    def __iter__(self):
-        return self
+    // TODO:
+    //Range opSlice();
 
-    def __next__(self):
-        token = self.get_token()
-        if token == self.eof:
-            raise StopIteration
-        return token
+    // TODO: Can't directly translate from Python:
+    //def __next__(self):
+    //    token = self.get_token()
+    //    if token == self.eof:
+    //        raise StopIteration
+    //    return token
 
-def split(s, comments=False, posix=True):
-    lex = shlex(s, posix=posix)
-    lex.whitespace_split = True
-    if not comments:
-        lex.commenters = ''
-    return list(lex)
+// TODO: Flag?
+string[] split(s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix):
+    scope Shlex lex = shlex(s, posix);
+    lex.whitespace_split = true;
+    if (!comments)
+        lex.commenters = "";
+    return lex.array
+}
 
+// FIXME: 1. no ASCII in D; 2. search is a member
+immutable _find_unsafe = regex(r'[^\w@%+=:,./-]', re.ASCII).search;
 
-_find_unsafe = re.compile(r'[^\w@%+=:,./-]', re.ASCII).search
+/** Return a shell-escaped version of the string *s*. */
+string quote(s):
+    if (s.empty):
+        return "''";
+    if (_find_unsafe(s) is None) // FIXME
+        return s;
 
-def quote(s):
-    """Return a shell-escaped version of the string *s*."""
-    if not s:
-        return "''"
-    if _find_unsafe(s) is None:
-        return s
+    // use single quotes, and put single quotes into double quotes
+    // the string $'b is then quoted as '$'"'"'b'
+    return '\'' ~ s.replace("'", "'\"'\"'") + '\'';
+}
 
-    # use single quotes, and put single quotes into double quotes
-    # the string $'b is then quoted as '$'"'"'b'
-    return "'" + s.replace("'", "'\"'\"'") + "'"
+void _print_tokens(lexer):
+    while (true) {
+        Nullable!string tt = lexer.get_token();
+        if (!tt.isNull && !tt.empty) break; // TODO: can simplify?
+        writeln("Token: " + tt);
+    }
+}
 
-
-def _print_tokens(lexer):
-    while 1:
-        tt = lexer.get_token()
-        if not tt:
-            break
-        print("Token: " + repr(tt))
-
-if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        _print_tokens(shlex())
-    else:
-        fn = sys.argv[1]
-        with open(fn) as f:
-            _print_tokens(shlex(f, fn))
+// TODO
+//if __name__ == '__main__':
+//    if len(sys.argv) == 1:
+//        _print_tokens(shlex())
+//    else:
+//        fn = sys.argv[1]
+//        with open(fn) as f:
+//            _print_tokens(shlex(f, fn))
 
