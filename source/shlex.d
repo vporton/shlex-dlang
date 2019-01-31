@@ -28,6 +28,10 @@ import std.string;
 
 // FIXME: camelCase
 
+// FIXME: https://stackoverflow.com/a/54469573/856090 instead of "in" operator
+
+// TODO: += 1 -> ++
+
 alias ShlexStream = InputRange!dchar; // Unicode stream
 
 private void skipLine(ShlexStream stream) {
@@ -51,7 +55,7 @@ private:
     static immutable quotes = "'\"";
     static immutable escape = '\\'; // TODO: char or string?
     static immutable escapedquotes = '"'; // TODO: char or string?
-    char state = ' '; // TODO: Should be an enum instead, also support None
+    char state = ' '; // TODO: also support None
     auto pushback = DList!string(); // may be not the fastest
     uint lineno;
     ubyte debug_ = 0;
@@ -60,7 +64,7 @@ private:
     Nullable!string source; // TODO: Represent no source just as an empty string?
     string punctuation_chars;
     // _pushback_chars is a push back queue used by lookahead logic
-    auto _pushback_chars = DList(); // may be not the fastest
+    auto _pushback_chars = DList!dchar(); // may be not the fastest
 
 public:
     this(Stream)(Stream instream,
@@ -142,7 +146,7 @@ public:
 
     // TODO: Use empty string for None?
     /** Get a token from the input stream (or from stack if it's nonempty) */
-    string get_token() {
+    Nullable!string get_token() {
         if (!pushback.empty) {
             immutable tok = pushback.popFirstOf();
             if (debug_ >= 1)
@@ -182,150 +186,162 @@ public:
         return raw;
     }
 
-    def read_token(self):
-        quoted = False
-        escapedstate = ' '
-        while True:
-            if self.punctuation_chars and self._pushback_chars:
-                nextchar = self._pushback_chars.pop()
-            else:
-                nextchar = self.instream.read(1)
-            if nextchar == '\n':
-                self.lineno += 1
-            if self.debug >= 3:
-                print("shlex: in state %r I see character: %r" % (self.state,
-                                                                  nextchar))
-            if self.state is None:
-                self.token = ''        # past end of file
-                break
-            elif self.state == ' ':
-                if not nextchar:
-                    self.state = None  # end of file
-                    break
-                elif nextchar in self.whitespace:
-                    if self.debug >= 2:
-                        print("shlex: I see whitespace in whitespace state")
-                    if self.token or (self.posix and quoted):
-                        break   # emit current token
-                    else:
-                        continue
-                elif nextchar in self.commenters:
-                    self.instream.readline()
-                    self.lineno += 1
-                elif self.posix and nextchar in self.escape:
-                    escapedstate = 'a'
-                    self.state = nextchar
-                elif nextchar in self.wordchars:
-                    self.token = nextchar
-                    self.state = 'a'
-                elif nextchar in self.punctuation_chars:
-                    self.token = nextchar
-                    self.state = 'c'
-                elif nextchar in self.quotes:
-                    if not self.posix:
-                        self.token = nextchar
-                    self.state = nextchar
-                elif self.whitespace_split:
-                    self.token = nextchar
-                    self.state = 'a'
-                else:
-                    self.token = nextchar
-                    if self.token or (self.posix and quoted):
-                        break   # emit current token
-                    else:
-                        continue
-            elif self.state in self.quotes:
-                quoted = True
-                if not nextchar:      # end of file
-                    if self.debug >= 2:
-                        print("shlex: I see EOF in quotes state")
-                    # XXX what error should be raised here?
-                    raise ValueError("No closing quotation")
-                if nextchar == self.state:
-                    if not self.posix:
-                        self.token += nextchar
-                        self.state = ' '
-                        break
-                    else:
-                        self.state = 'a'
-                elif (self.posix and nextchar in self.escape and self.state
-                      in self.escapedquotes):
-                    escapedstate = self.state
-                    self.state = nextchar
-                else:
-                    self.token += nextchar
-            elif self.state in self.escape:
-                if not nextchar:      # end of file
-                    if self.debug >= 2:
-                        print("shlex: I see EOF in escape state")
-                    # XXX what error should be raised here?
-                    raise ValueError("No escaped character")
-                # In posix shells, only the quote itself or the escape
-                # character may be escaped within quotes.
-                if (escapedstate in self.quotes and
-                        nextchar != self.state and nextchar != escapedstate):
-                    self.token += self.state
-                self.token += nextchar
-                self.state = escapedstate
-            elif self.state in ('a', 'c'):
-                if not nextchar:
-                    self.state = None   # end of file
-                    break
-                elif nextchar in self.whitespace:
-                    if self.debug >= 2:
-                        print("shlex: I see whitespace in word state")
-                    self.state = ' '
-                    if self.token or (self.posix and quoted):
-                        break   # emit current token
-                    else:
-                        continue
-                elif nextchar in self.commenters:
-                    self.instream.readline()
-                    self.lineno += 1
-                    if self.posix:
-                        self.state = ' '
-                        if self.token or (self.posix and quoted):
-                            break   # emit current token
-                        else:
-                            continue
-                elif self.state == 'c':
-                    if nextchar in self.punctuation_chars:
-                        self.token += nextchar
-                    else:
-                        if nextchar not in self.whitespace:
-                            self._pushback_chars.append(nextchar)
-                        self.state = ' '
-                        break
-                elif self.posix and nextchar in self.quotes:
-                    self.state = nextchar
-                elif self.posix and nextchar in self.escape:
-                    escapedstate = 'a'
-                    self.state = nextchar
-                elif (nextchar in self.wordchars or nextchar in self.quotes
-                      or self.whitespace_split):
-                    self.token += nextchar
-                else:
-                    if self.punctuation_chars:
-                        self._pushback_chars.append(nextchar)
-                    else:
-                        self.pushback.appendleft(nextchar)
-                    if self.debug >= 2:
-                        print("shlex: I see punctuation in word state")
-                    self.state = ' '
-                    if self.token or (self.posix and quoted):
-                        break   # emit current token
-                    else:
-                        continue
-        result = self.token
-        self.token = ''
-        if self.posix and not quoted and result == '':
+    // TODO: Use empty string for None?
+    Nullable!string read_token() {
+        bool quoted = false;
+        char escapedstate = ' '; // TODO: use an enum
+        while (true) {
+            Nullable!dchar nextchar; // FIXME: check if == works correctly below
+            if (!punctuation_chars.isNull && !_pushback_chars.empty) // FIXME: check all .empty vs .isNull
+                nextchar = _pushback_chars.poplastOf();
+            else {
+                if (!insream.empty) {
+                    nextchar = instream.front;
+                    instream.popFront();
+                }
+            }
+            if (nextchar == '\n'd)
+                lineno += 1;
+            if (debug_ >= 3)
+                print("shlex: in state %s I see character: %s".format(self.state, nextchar));
+            if (state == None) { // FIXME
+                token = "";        // past end of file
+                break;
+            } else if (state == ' ') {
+                if (nextchar.isNull) {
+                    state = None  // end of file
+                    break;
+                } else if (nextchar in whitespace) { // FIXME: wrong "in"!
+                    if (debug_ >= 2)
+                        writeln("shlex: I see whitespace in whitespace state");
+                    if (token || (posix && quoted))
+                        break;   // emit current token
+                    else
+                        continue;
+                } else if (nextchar in self.commenters) { // FIXME: wrong "in"!
+                    instream.skipLine();
+                    lineno += 1
+                } else if (posix && nextchar in escape) { // FIXME: wrong "in"!
+                    escapedstate = 'a';
+                    state = nextchar;
+                } else if (nextchar in wordchars) { // FIXME: wrong "in"!
+                    token = nextchar;
+                    state = 'a';
+                } else if (nextchar in punctuation_chars) { // FIXME: wrong "in"!
+                    token = nextchar;
+                    state = 'c';
+                } else if (nextchar in quotes) { // FIXME: wrong "in"!
+                    if (!posix) token = nextchar;
+                    state = nextchar;
+                } else if (whitespace_split) {
+                    token = nextchar;
+                    state = 'a';
+                } else {
+                    token = nextchar;
+                    if (token || (posix && quoted))
+                        break;   // emit current token
+                    else
+                        continue;
+                }
+            } else if (state in quotes) { // FIXME: wrong "in"!
+                quoted = true;
+                if (nextchar.isNull) {      // end of file
+                    if (debug_ >= 2)
+                        writeln("shlex: I see EOF in quotes state");
+                    // XXX what error should be raised here?
+                    throw new Exception("No closing quotation");
+                }
+                if (nextchar == state) {
+                    if (!self.posix) {
+                        self.token ~= nextchar;
+                        self.state = ' ';
+                        break;
+                    } else
+                        state = 'a';
+                } else if (posix && nextchar in escape && self.state in self.escapedquotes) { // FIXME: wrong "in"!
+                    escapedstate = state;
+                    state = nextchar;
+                } else
+                    token ~= nextchar;
+            } else if (state in escape) { // FIXME: wrong "in"!
+                if (nextchar.isNull) {      // end of file
+                    if (debug_ >= 2)
+                        writeln("shlex: I see EOF in escape state");
+                    // XXX what error should be raised here?
+                    throw new Exception("No escaped character");
+                }
+                // In posix shells, only the quote itself or the escape
+                // character may be escaped within quotes.
+                if (escapedstate in self.quotes && nextchar != state && nextchar != escapedstate) // FIXME: wrong "in"!
+                    token ~= self.state;
+                token ~= nextchar;
+                state = escapedstate;
+            } else if (self.state in ['a', 'c']) {
+                if (nextchar.isNull) {
+                    state = None   // end of file
+                    break;
+                } else if (nextchar in self.whitespace) { // FIXME: wrong "in"!
+                    if (debug_ >= 2)
+                        writeln("shlex: I see whitespace in word state");
+                    state = ' ';
+                    if (token || (self.posix && quoted))
+                        break;   // emit current token
+                    else
+                        continue;
+                } else if (nextchar in self.commenters) { // FIXME: wrong "in"!
+                    instream.skipLine();
+                    lineno += 1;
+                    if (posix) {
+                        state = ' ';
+                        if (!token.empty || (posix && quoted))
+                            break;   // emit current token
+                        else
+                            continue;
+                    }
+                } else if (state == 'c') {
+                    if (nextchar in punctuation_chars) // FIXME: wrong "in"!
+                        self.token ~= nextchar;
+                    else {
+                        if (!(nextchar in self.whitespace)) // FIXME: wrong "in"!
+                            _pushback_chars.insertBack(nextchar);
+                        state = ' ';
+                        break;
+                    }
+                } else if (posix && nextchar in self.quotes) // FIXME: wrong "in"!
+                    state = nextchar;
+                else if (posix && nextchar in self.escape) { // FIXME: wrong "in"!
+                    escapedstate = 'a';
+                    state = nextchar;
+                } else if (nextchar in self.wordchars || nextchar in self.quotes // FIXME: wrong "in"!
+                      || whitespace_split)
+                    token ~= nextchar;
+                else {
+                    if (punctuation_chars.empty)
+                        pushback.insertFront(nextchar);
+                    else
+                        _pushback_chars.insertBack(nextchar);
+                    if (debug_ >= 2)
+                        writeln("shlex: I see punctuation in word state");
+                    state = ' ';
+                    if (!token.empty || (posix && quoted))
+                        break;   // emit current token
+                    else
+                        continue;
+                }
+            }
+        }
+        Nullable!string result = token;
+        token = "";
+        if (posix && !quoted && result == "") // FIXME: check result == ""
             result = None
-        if self.debug > 1:
-            if result:
-                print("shlex: raw token=" + repr(result))
-            else:
-                print("shlex: raw token=EOF")
-        return result
+        if (debug_ > 1) {
+            if (!result.isNull && ! result.empty) // TODO: can simplify?
+                writeln("shlex: raw token=" ~ result);
+            else
+                writeln("shlex: raw token=EOF");
+        }
+        return result;
+    }
 
     def sourcehook(self, newfile):
         "Hook called on a filename to be sourced."
