@@ -36,19 +36,33 @@ private void skipLine(ShlexStream stream) {
 
 /// A lexical analyzer class for simple shell-like syntaxes
 struct Shlex {
-    private alias Posix = Flag!"posix";
-    private alias PunctuationChars = Flag!"punctuationChars";
+    alias Posix = Flag!"posix";
+    alias PunctuationChars = Flag!"punctuationChars";
 
+private:
     // TODO: Python shlex has some of the following as public instance variables
-    private ShlexStream instream;
-    private Nullable!string infile;
-    private Posix posix;
-    private delegate isEof(string token);
-    private string wordchars;
-    private static immutable whitespace = " \t\r\n";
-    private bool whitespace_split = false;
-    private static immutable quotes = "'\"";
+    ShlexStream instream;
+    Nullable!string infile;
+    Posix posix;
+    delegate isEof(string token);
+    string wordchars;
+    static immutable whitespace = " \t\r\n";
+    bool whitespace_split = false;
+    static immutable quotes = "'\"";
+    static immutable escape = '\\'; // TODO: char or string?
+    static immutable escapedquotes = '"'; // TODO: char or string?
+    char state = ' '; // TODO: Should be an enum instead, also support None
+    auto pushback = DList(); // may be not the fastest
+    uint lineno;
+    ubyte debug_ = 0;
+    string token = "";
+    auto filestack = DList(); // may be not the fastest
+    Nullable!string source; // TODO: Represent no source just as an empty string?
+    string punctuation_chars;
+    // _pushback_chars is a push back queue used by lookahead logic
+    auto _pushback_chars = DList(); // may be not the fastest
 
+public:
     this(Stream)(Stream instream,
                  Nullable!string infile = Nullable!string(),
                  Posix posix = No.posix,
@@ -76,28 +90,16 @@ struct Shlex {
         wordchars = "abcdfeghijklmnopqrstuvwxyz" ~ "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
         if (posix)
             wordchars ~= "ßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" ~ "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ";
-        self.escape = '\\'
-        self.escapedquotes = '"'
-        self.state = ' '
-        self.pushback = deque()
-        self.lineno = 1
-        self.debug = 0
-        self.token = ''
-        self.filestack = deque()
-        self.source = None
-        if not punctuation_chars:
-            punctuation_chars = ''
-        elif punctuation_chars is True:
-            punctuation_chars = '();<>|&'
-        self.punctuation_chars = punctuation_chars
-        if punctuation_chars:
-            # _pushback_chars is a push back queue used by lookahead logic
-            self._pushback_chars = deque()
-            # these chars added because allowed in file names, args, wildcards
-            self.wordchars += '~-./*?='
-            #remove any punctuation chars from wordchars
+        lineno = 1
+        this.punctuation_chars = punctuation_chars ? "();<>|&" : "";
+        if (punctuation_chars) {
+            // these chars added because allowed in file names, args, wildcards
+            wordchars ~= '~-./*?='
+            // remove any punctuation chars from wordchars // TODO: https://stackoverflow.com/q/54467991/856090
             t = self.wordchars.maketrans(dict.fromkeys(punctuation_chars))
             self.wordchars = self.wordchars.translate(t)
+        }
+    }
 
     def push_token(self, tok):
         "Push a token onto the stack popped by the get_token method"
