@@ -39,9 +39,15 @@ struct Shlex {
     private alias Posix = Flag!"posix";
     private alias PunctuationChars = Flag!"punctuationChars";
 
+    // TODO: Python shlex has some of the following as public instance variables
     private ShlexStream instream;
     private Nullable!string infile;
     private Posix posix;
+    private delegate isEof(string token);
+    private string wordchars;
+    private static immutable whitespace = " \t\r\n";
+    private bool whitespace_split = false;
+    private static immutable quotes = "'\"";
 
     this(Stream)(Stream instream,
                  Nullable!string infile = Nullable!string(),
@@ -57,22 +63,19 @@ struct Shlex {
          Posix posix = No.posix,
          PunctuationChars punctuation_chars = No.punctuationChars)
     {
-        this.instream = instream
-        this.infile = infile
-        this.posix = posix
-        if posix:
-            self.eof = None
-        else:
-            self.eof = ''
-        self.commenters = '#'
-        self.wordchars = ('abcdfeghijklmnopqrstuvwxyz'
-                          'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_')
-        if self.posix:
-            self.wordchars += ('ßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ'
-                               'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ')
-        self.whitespace = ' \t\r\n'
-        self.whitespace_split = False
-        self.quotes = '\'"'
+        this.instream = instream;
+        this.infile = infile;
+        this.posix = posix;
+        isEof = posix ? (string) => false ? (string s) => s.empty;
+        // TODO: remove commented code
+        //if posix:
+        //    self.eof = None
+        //else:
+        //    self.eof = ''
+        //self.commenters = '#'
+        wordchars = "abcdfeghijklmnopqrstuvwxyz" ~ "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
+        if (posix)
+            wordchars ~= "ßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" ~ "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ";
         self.escape = '\\'
         self.escapedquotes = '"'
         self.state = ' '
