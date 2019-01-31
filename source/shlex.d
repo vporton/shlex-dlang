@@ -23,26 +23,32 @@ Copyright © 2001-2019 Python Software Foundation; All Rights Reserved
 
 module shlex;
 
+import std.typecons;
 import std.string;
+
+// FIXME: camelCase
 
 /// A lexical analyzer class for simple shell-like syntaxes
 struct Shlex {
+    private alias Posix = Flag!"posix";
+    private alias PunctuationChars = Flag!"punctuationChars";
+
     private InputRange!string instream;
     private Nullable!string infile;
-    private bool posix;
+    private Posix posix;
 
     this(string instream,
          Nullable!string infile = Nullable!string(),
-         bool posix=false,
-         punctuation_chars=false)
+         Posix posix = No.posix,
+         PunctuationChars punctuation_chars = No.punctuationChars)
     {
         this(inputRangeObject(instream.lineSplitter), infile, posix, punctuation_chars);
     }
 
     this(Stream)(Stream instream,
                  Nullable!string infile = Nullable!string(),
-                 bool posix=false,
-                 punctuation_chars=false)
+                 Posix posix = No.posix,
+                 PunctuationChars punctuation_chars = No.punctuationChars)
     {
         this(inputRangeObject(instream), infile, posix, punctuation_chars);
     }
@@ -50,8 +56,8 @@ struct Shlex {
     /** We don't support implicit stdin as `instream` as in Python. */
     this(InputRange!string instream,
          Nullable!string infile = Nullable!string(),
-         bool posix=false,
-         punctuation_chars=false)
+         Posix posix = No.posix,
+         PunctuationChars punctuation_chars = No.punctuationChars)
     {
         this.instream = instream
         this.infile = infile
