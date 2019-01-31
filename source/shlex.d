@@ -52,11 +52,11 @@ private:
     static immutable escape = '\\'; // TODO: char or string?
     static immutable escapedquotes = '"'; // TODO: char or string?
     char state = ' '; // TODO: Should be an enum instead, also support None
-    auto pushback = DList(); // may be not the fastest
+    auto pushback = DList!string(); // may be not the fastest
     uint lineno;
     ubyte debug_ = 0;
     string token = "";
-    auto filestack = DList!(Tuple(Nullable!string, ShlexStream, uint)); // may be not the fastest
+    auto filestack = DList!(Tuple(Nullable!string, ShlexStream, uint))(); // may be not the fastest
     Nullable!string source; // TODO: Represent no source just as an empty string?
     string punctuation_chars;
     // _pushback_chars is a push back queue used by lookahead logic
@@ -140,37 +140,47 @@ public:
         state = ' ';
     }
 
-    def get_token(self):
-        "Get a token from the input stream (or from stack if it's nonempty)"
-        if self.pushback:
-            tok = self.pushback.popleft()
-            if self.debug >= 1:
-                print("shlex: popping token " + repr(tok))
-            return tok
-        # No pushback.  Get a token.
-        raw = self.read_token()
-        # Handle inclusions
-        if self.source is not None:
-            while raw == self.source:
-                spec = self.sourcehook(self.read_token())
-                if spec:
-                    (newfile, newstream) = spec
-                    self.push_source(newstream, newfile)
-                raw = self.get_token()
-        # Maybe we got EOF instead?
-        while raw == self.eof:
-            if not self.filestack:
-                return self.eof
-            else:
-                self.pop_source()
-                raw = self.get_token()
-        # Neither inclusion nor EOF
-        if self.debug >= 1:
-            if raw != self.eof:
-                print("shlex: token=" + repr(raw))
-            else:
-                print("shlex: token=EOF")
-        return raw
+    // TODO: Use empty string for None?
+    /** Get a token from the input stream (or from stack if it's nonempty) */
+    string get_token() {
+        if (!pushback.empty) {
+            immutable tok = pushback.popFirstOf();
+            if (debug_ >= 1)
+                writeln("shlex: popping token " ~ tok);
+            return tok;
+        }
+        // No pushback.  Get a token.
+        Nullable!string raw = read_token();
+        // Handle inclusions
+        if (!source.empty) {
+            while (raw == source) {
+                immutable spec = sourcehook(read_token());
+                if (!spec.empty) {
+                    immutable newfile   = spec[0];
+                    immutable newstream = spec[1];
+                    push_source(newstream, newfile);
+                }
+                raw = get_token();
+            }
+        }
+        // Maybe we got EOF instead?
+        while isEof(raw) {
+            if (filestack.empty)
+                return self.eof; // FIXME
+            else {
+                pop_source()
+                raw = get_token();
+            }
+        }
+        // Neither inclusion nor EOF
+        if (debug_ >= 1) {
+            if (!isEof(raw))
+                print("shlex: token=" ~ raw);
+            else
+                print("shlex: token=EOF");
+        }
+        return raw;
+    }
 
     def read_token(self):
         quoted = False
