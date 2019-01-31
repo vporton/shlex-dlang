@@ -1,5 +1,3 @@
-module shlex;
-
 /*
 shlex, simple shell-like lexical analysis library
 Copyright (C) 2019  Victor Porton
@@ -35,7 +33,7 @@ import std.string;
 alias ShlexStream = InputRange!dchar; // Unicode stream
 
 private void skipLine(ShlexStream stream) {
-    while (!stream.empty && stream.front == '\n'd) stream.popFront();
+    while (!stream.empty && stream.front == '\n') stream.popFront();
 }
 
 /// A lexical analyzer class for simple shell-like syntaxes
@@ -49,7 +47,7 @@ private:
     ShlexStream instream;
     Nullable!string infile;
     Posix posix;
-    delegate isEof(string token);
+    bool delegate(string token) isEof;
     string commenters = "#";
     string wordchars;
     static immutable whitespace = " \t\r\n";
@@ -62,7 +60,7 @@ private:
     uint lineno;
     ubyte debug_ = 0;
     string token = "";
-    auto filestack = DList!(Tuple(Nullable!string, ShlexStream, uint))(); // may be not the fastest
+    auto filestack = DList!(Tuple!(Nullable!string, ShlexStream, uint))(); // may be not the fastest
     Nullable!string source; // TODO: Represent no source just as an empty string?
     string punctuation_chars;
     // _pushback_chars is a push back queue used by lookahead logic
@@ -86,7 +84,7 @@ public:
         this.instream = instream;
         this.infile = infile;
         this.posix = posix;
-        isEof = posix ? (string) => false ? (string s) => s.empty;
+        isEof = posix ? (string) => false : (string s) => s.empty;
         // TODO: remove commented code
         //if posix:
         //    self.eof = None
@@ -95,11 +93,11 @@ public:
         wordchars = "abcdfeghijklmnopqrstuvwxyz" ~ "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
         if (posix)
             wordchars ~= "ßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" ~ "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ";
-        lineno = 1
+        lineno = 1;
         this.punctuation_chars = punctuation_chars ? "();<>|&" : "";
         if (punctuation_chars) {
             // these chars added because allowed in file names, args, wildcards
-            wordchars ~= '~-./*?='
+            wordchars ~= "~-./*?=";
             // remove any punctuation chars from wordchars // TODO: https://stackoverflow.com/q/54467991/856090
             t = self.wordchars.maketrans(dict.fromkeys(punctuation_chars))
             self.wordchars = self.wordchars.translate(t)
