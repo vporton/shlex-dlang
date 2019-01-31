@@ -2,7 +2,7 @@
   "name" : "shlex",
   "description" : "Simple shell-like lexical analysis library",
   "homepage" : "https://github.com/vporton/shlex-dlang",
-  "license" : "GPL-3.0",
+  "license" : "GPL-3.0 or later",
   "authors" : [
     "Victor Porton"
   ],
