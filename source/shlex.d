@@ -43,15 +43,7 @@ struct Shlex {
     private Nullable!string infile;
     private Posix posix;
 
-    this(string instream,
-         Nullable!string infile = Nullable!string(),
-         Posix posix = No.posix,
-         PunctuationChars punctuation_chars = No.punctuationChars)
-    {
-        this(inputRangeObject(instream.lineSplitter), infile, posix, punctuation_chars);
-    }
-
-    this(Stream)(ShlexStream instream,
+    this(Stream)(Stream instream,
                  Nullable!string infile = Nullable!string(),
                  Posix posix = No.posix,
                  PunctuationChars punctuation_chars = No.punctuationChars)
