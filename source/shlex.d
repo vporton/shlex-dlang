@@ -28,32 +28,34 @@ import std.string;
 /// A lexical analyzer class for simple shell-like syntaxes
 struct Shlex {
     private InputRange!string instream;
+    private Nullable!string infile;
+    private bool posix;
 
-    this(string instream, Nullable!string infile, bool posix=false, punctuation_chars=false) {
-        // It would be more efficient to use incremental splitting
+    this(string instream,
+         Nullable!string infile = Nullable!string(),
+         bool posix=false,
+         punctuation_chars=false)
+    {
         this(inputRangeObject(instream.lineSplitter), infile, posix, punctuation_chars);
     }
 
-    this(Stream)(InputRange!string instream,
-                 Nullable!string infile,
+    this(Stream)(Stream instream,
+                 Nullable!string infile = Nullable!string(),
                  bool posix=false,
                  punctuation_chars=false)
     {
         this(inputRangeObject(instream), infile, posix, punctuation_chars);
     }
 
+    /** We don't support implicit stdin as `instream` as in Python. */
     this(InputRange!string instream,
-         Nullable!string infile,
+         Nullable!string infile = Nullable!string(),
          bool posix=false,
          punctuation_chars=false)
     {
-        if instream is not None:
-            self.instream = instream
-            self.infile = infile
-        else:
-            self.instream = sys.stdin
-            self.infile = None
-        self.posix = posix
+        this.instream = instream
+        this.infile = infile
+        this.posix = posix
         if posix:
             self.eof = None
         else:
