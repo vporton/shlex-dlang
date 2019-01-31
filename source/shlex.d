@@ -28,12 +28,18 @@ import std.string;
 
 // FIXME: camelCase
 
+alias ShlexStream = InputRange!dchar; // Unicode stream
+
+private void skipLine(ShlexStream stream) {
+    while (!stream.empty && stream.front == '\n'd) stream.popFront();
+}
+
 /// A lexical analyzer class for simple shell-like syntaxes
 struct Shlex {
     private alias Posix = Flag!"posix";
     private alias PunctuationChars = Flag!"punctuationChars";
 
-    private InputRange!string instream;
+    private ShlexStream instream;
     private Nullable!string infile;
     private Posix posix;
 
@@ -45,7 +51,7 @@ struct Shlex {
         this(inputRangeObject(instream.lineSplitter), infile, posix, punctuation_chars);
     }
 
-    this(Stream)(Stream instream,
+    this(Stream)(ShlexStream instream,
                  Nullable!string infile = Nullable!string(),
                  Posix posix = No.posix,
                  PunctuationChars punctuation_chars = No.punctuationChars)
@@ -54,7 +60,7 @@ struct Shlex {
     }
 
     /** We don't support implicit stdin as `instream` as in Python. */
-    this(InputRange!string instream,
+    this(ShlexStream instream,
          Nullable!string infile = Nullable!string(),
          Posix posix = No.posix,
          PunctuationChars punctuation_chars = No.punctuationChars)
