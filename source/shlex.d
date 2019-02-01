@@ -26,7 +26,7 @@ import std.string;
 
 // FIXME: camelCase
 
-// FIXME: https://stackoverflow.com/a/54469573/856090 instead of "in" operator
+// FIXME: https://stackoverflow.com/a/54475280/856090 instead of "in" operator
 
 // TODO: += 1 -> ++
 
