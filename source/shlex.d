@@ -349,7 +349,7 @@ public:
                     token ~= nextchar;
                 else {
                     if (punctuation_chars.empty)
-                        pushback.insertFront(nextchar);
+                        pushback.insertFront(nextchar.get.to!string); // FIXME: is .get valid?
                     else
                         _pushback_chars.insertBack(nextchar);
                     if (debug_ >= 2)
@@ -365,7 +365,7 @@ public:
         Nullable!string result = token;
         token = "";
         if (posix && !quoted && result == "") // FIXME: check result == ""
-            result = None;
+            result = Nullable!string();
         if (debug_ > 1) {
             if (!result.isNull && ! result.empty) // TODO: can simplify?
                 writeln("shlex: raw token=" ~ result);
@@ -409,7 +409,7 @@ public:
 
 // TODO: Flag?
 string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {
-    scope Shlex lex = shlex(s, posix);
+    scope Shlex lex = Shlex(s, posix);
     lex.whitespace_split = true;
     if (!comments)
         lex.commenters = "";
@@ -422,7 +422,7 @@ private immutable _find_unsafe = regex(r"[^[a-zA-Z0-9]@%+=:,./-]");
 string quote(string s) {
     if (s.empty)
         return "''";
-    if (!mathFirst(s, _find_unsafe))
+    if (!matchFirst(s, _find_unsafe))
         return s;
 
     // use single quotes, and put single quotes into double quotes
