@@ -98,9 +98,8 @@ public:
         if (punctuation_chars) {
             // these chars added because allowed in file names, args, wildcards
             wordchars ~= "~-./*?=";
-            // remove any punctuation chars from wordchars // TODO: https://stackoverflow.com/q/54467991/856090
-            t = self.wordchars.maketrans(dict.fromkeys(punctuation_chars))
-            self.wordchars = self.wordchars.translate(t)
+            // remove any punctuation chars from wordchars
+            wordchars = wordchars.filter(c => !punctuation_chars.canFind(c));
         }
     }
 
@@ -210,26 +209,26 @@ public:
                 if (nextchar.isNull) {
                     state = None  // end of file
                     break;
-                } else if (nextchar in whitespace) { // FIXME: wrong "in"!
+                } else if (whitespace.canFind(nextchar)) {
                     if (debug_ >= 2)
                         writeln("shlex: I see whitespace in whitespace state");
                     if (token || (posix && quoted))
                         break;   // emit current token
                     else
                         continue;
-                } else if (nextchar in self.commenters) { // FIXME: wrong "in"!
+                } else if (commenters.canFind(nextchar)) {
                     instream.skipLine();
                     lineno += 1
-                } else if (posix && nextchar in escape) { // FIXME: wrong "in"!
+                } else if (posix && escape.canFind(nextchar)) {
                     escapedstate = 'a';
                     state = nextchar;
-                } else if (nextchar in wordchars) { // FIXME: wrong "in"!
+                } else if (wordchars.canFind(nextchar)) {
                     token = nextchar;
                     state = 'a';
-                } else if (nextchar in punctuation_chars) { // FIXME: wrong "in"!
+                } else if punctuation_chars.canFind(nextchar)) {
                     token = nextchar;
                     state = 'c';
-                } else if (nextchar in quotes) { // FIXME: wrong "in"!
+                } else if (quotes.canFind(nextchar)) {
                     if (!posix) token = nextchar;
                     state = nextchar;
                 } else if (whitespace_split) {
@@ -242,7 +241,7 @@ public:
                     else
                         continue;
                 }
-            } else if (state in quotes) { // FIXME: wrong "in"!
+            } else if (quotes.canFind(state)) { // FIXME: None
                 quoted = true;
                 if (nextchar.isNull) {      // end of file
                     if (debug_ >= 2)
@@ -257,12 +256,12 @@ public:
                         break;
                     } else
                         state = 'a';
-                } else if (posix && nextchar in escape && self.state in self.escapedquotes) { // FIXME: wrong "in"!
+                } else if (posix && escape.canFind(nextchar) && escapedquotes.canFind(state)) { // FIXME: None
                     escapedstate = state;
                     state = nextchar;
                 } else
                     token ~= nextchar;
-            } else if (state in escape) { // FIXME: wrong "in"!
+            } else if (escape.canFind(state)) { // FIXME: None
                 if (nextchar.isNull) {      // end of file
                     if (debug_ >= 2)
                         writeln("shlex: I see EOF in escape state");
@@ -271,7 +270,7 @@ public:
                 }
                 // In posix shells, only the quote itself or the escape
                 // character may be escaped within quotes.
-                if (escapedstate in self.quotes && nextchar != state && nextchar != escapedstate) // FIXME: wrong "in"!
+                if (quotes.canFind(escapedstate) && nextchar != state && nextchar != escapedstate)
                     token ~= self.state;
                 token ~= nextchar;
                 state = escapedstate;
@@ -279,7 +278,7 @@ public:
                 if (nextchar.isNull) {
                     state = None   // end of file
                     break;
-                } else if (nextchar in self.whitespace) { // FIXME: wrong "in"!
+                } else if (whitespace.canFind(nextchar)) {
                     if (debug_ >= 2)
                         writeln("shlex: I see whitespace in word state");
                     state = ' ';
@@ -287,7 +286,7 @@ public:
                         break;   // emit current token
                     else
                         continue;
-                } else if (nextchar in self.commenters) { // FIXME: wrong "in"!
+                } else if (commenters.canFind(nextchar)) {
                     instream.skipLine();
                     lineno += 1;
                     if (posix) {
@@ -298,20 +297,20 @@ public:
                             continue;
                     }
                 } else if (state == 'c') {
-                    if (nextchar in punctuation_chars) // FIXME: wrong "in"!
+                    if (punctuation_chars.canFind(nextchar))
                         self.token ~= nextchar;
                     else {
-                        if (!(nextchar in self.whitespace)) // FIXME: wrong "in"!
+                        if (!whitespace.canFind(nextchar))
                             _pushback_chars.insertBack(nextchar);
                         state = ' ';
                         break;
                     }
-                } else if (posix && nextchar in self.quotes) // FIXME: wrong "in"!
+                } else if (posix && quotes.canFind(nextchar))
                     state = nextchar;
-                else if (posix && nextchar in self.escape) { // FIXME: wrong "in"!
+                else if (posix && escape.canFind(nextchar)) {
                     escapedstate = 'a';
                     state = nextchar;
-                } else if (nextchar in self.wordchars || nextchar in self.quotes // FIXME: wrong "in"!
+                } else if (wordchars.canFind(nextchar) || quotes.canFind(nextchar)
                       || whitespace_split)
                     token ~= nextchar;
                 else {
