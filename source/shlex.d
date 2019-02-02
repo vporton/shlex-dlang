@@ -371,6 +371,7 @@ public:
     //    if token == self.eof:
     //        raise StopIteration
     //    return token
+}
 
 // TODO: Flag?
 string[] split(s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {
@@ -384,18 +385,18 @@ string[] split(s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes
 private immutable _find_unsafe = regex(r"[^[a-zA-Z0-9]@%+=:,./-]");
 
 /** Return a shell-escaped version of the string *s*. */
-string quote(s):
-    if (s.empty):
+string quote(s) {
+    if (s.empty)
         return "''";
     if (!mathFirst(s, _find_unsafe))
         return s;
 
     // use single quotes, and put single quotes into double quotes
     // the string $'b is then quoted as '$'"'"'b'
-    return '\'' ~ s.replace("'", "'\"'\"'") + '\'';
+    return '\'' ~ s.replace("'", "'\"'\"'") ~ '\'';
 }
 
-void _print_tokens(lexer):
+private void _print_tokens(lexer) {
     while (true) {
         Nullable!string tt = lexer.get_token();
         if (!tt.isNull && !tt.empty) break; // TODO: can simplify?
