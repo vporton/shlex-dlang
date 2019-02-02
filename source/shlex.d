@@ -461,6 +461,10 @@ string quote(string s) {
     return '\'' ~ s.replace("'", "'\"'\"'") ~ '\'';
 }
 
+unittest {
+    assert(quote("somefile; ls -xz ~") == "'somefile; ls -xz ~'");
+}
+
 private void _print_tokens(Shlex lexer) {
     while (true) {
         Nullable!string tt = lexer.get_token();
