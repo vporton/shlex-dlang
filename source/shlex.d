@@ -447,6 +447,11 @@ string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posi
     return lex.array;
 }
 
+unittest {
+    assert(split("ls -l 'somefile; ls -xz ~'") == ["ls", "-l", "somefile; ls -xz ~"]);
+    assert(split("ssh home 'somefile; ls -xz ~'") == ["ssh", "home", "somefile; ls -xz ~"]);
+}
+
 private immutable _find_unsafe = regex(r"[^[a-zA-Z0-9]@%+=:,./-]");
 
 /** Return a shell-escaped version of the string *s*. */
