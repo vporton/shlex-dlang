@@ -270,7 +270,7 @@ public:
                     state = 'a';
                 } else {
                     token = nextchar;
-                    if (token || (posix && quoted))
+                    if (token || (posix && quoted)) // FIXME: isNull empty?
                         break;   // emit current token
                     else
                         continue;
