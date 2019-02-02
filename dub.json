@@ -9,6 +9,13 @@
   "targetType" : "library",
   "configurations": [
     {
+      "name": "application",
+      "targetType": "executable",
+      "sourceFiles": [
+        "test.d"
+      ]
+    },
+    {
       "name": "shared-library",
       "targetType": "dynamicLibrary"
     },
