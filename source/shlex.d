@@ -87,9 +87,9 @@ private:
     static immutable whitespace = " \t\r\n";
     bool whitespace_split = false;
     static immutable quotes = "'\"";
-    static immutable escape = '\\'; // TODO: char or string?
+    static immutable escape = "\\"; // char or string?
     static immutable escapedquotes = '"'; // TODO: char or string?
-    Nullable!char state = ' '; // a little inefficient?
+    Nullable!dchar state = ' '; // a little inefficient?
     auto pushback = DList!string(); // may be not the fastest
     uint lineno;
     ubyte debug_ = 0;
@@ -243,26 +243,26 @@ public:
                 if (nextchar.isNull) {
                     state = Nullable!char();  // end of file
                     break;
-                } else if (whitespace.canFind(nextchar)) {
+                } else if (whitespace.canFind(nextchar.get)) {
                     if (debug_ >= 2)
                         writeln("shlex: I see whitespace in whitespace state");
                     if (token || (posix && quoted))
                         break;   // emit current token
                     else
                         continue;
-                } else if (commenters.canFind(nextchar)) {
+                } else if (commenters.canFind(nextchar.get)) {
                     instream.skipLine();
                     lineno += 1;
-                } else if (posix && escape.canFind(nextchar)) {
+                } else if (posix && escape.canFind(nextchar.get)) {
                     escapedstate = 'a';
                     state = nextchar;
-                } else if (wordchars.canFind(nextchar)) {
+                } else if (wordchars.canFind(nextchar.get)) {
                     token = nextchar;
                     state = 'a';
-                } else if (punctuation_chars.canFind(nextchar)) {
+                } else if (punctuation_chars.canFind(nextchar.get)) {
                     token = nextchar;
                     state = 'c';
-                } else if (quotes.canFind(nextchar)) {
+                } else if (quotes.canFind(nextchar.get)) {
                     if (!posix) token = nextchar;
                     state = nextchar;
                 } else if (whitespace_split) {
@@ -290,7 +290,7 @@ public:
                         break;
                     } else
                         state = 'a';
-                } else if (posix && escape.canFind(nextchar) && escapedquotes.canFind(state)) { // FIXME: None
+                } else if (posix && escape.canFind(nextchar.get) && escapedquotes.canFind(state)) { // FIXME: None
                     escapedstate = state;
                     state = nextchar;
                 } else
@@ -312,7 +312,7 @@ public:
                 if (nextchar.isNull) {
                     state = None;   // end of file
                     break;
-                } else if (whitespace.canFind(nextchar)) {
+                } else if (whitespace.canFind(nextchar.get)) {
                     if (debug_ >= 2)
                         writeln("shlex: I see whitespace in word state");
                     state = ' ';
@@ -320,7 +320,7 @@ public:
                         break;   // emit current token
                     else
                         continue;
-                } else if (commenters.canFind(nextchar)) {
+                } else if (commenters.canFind(nextchar.get)) {
                     instream.skipLine();
                     lineno += 1;
                     if (posix) {
@@ -331,20 +331,20 @@ public:
                             continue;
                     }
                 } else if (state == 'c') {
-                    if (punctuation_chars.canFind(nextchar))
+                    if (punctuation_chars.canFind(nextchar.get))
                         self.token ~= nextchar;
                     else {
-                        if (!whitespace.canFind(nextchar))
+                        if (!whitespace.canFind(nextchar.get))
                             _pushback_chars.insertBack(nextchar);
                         state = ' ';
                         break;
                     }
-                } else if (posix && quotes.canFind(nextchar))
+                } else if (posix && quotes.canFind(nextchar.get))
                     state = nextchar;
-                else if (posix && escape.canFind(nextchar)) {
+                else if (posix && escape.canFind(nextchar.get)) {
                     escapedstate = 'a';
                     state = nextchar;
-                } else if (wordchars.canFind(nextchar) || quotes.canFind(nextchar)
+                } else if (wordchars.canFind(nextchar.get) || quotes.canFind(nextchar.get)
                       || whitespace_split)
                     token ~= nextchar;
                 else {
