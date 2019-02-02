@@ -88,7 +88,7 @@ private:
     bool whitespace_split = false;
     static immutable quotes = "'\"";
     static immutable escape = "\\"; // char or string?
-    static immutable escapedquotes = '"'; // TODO: char or string?
+    static immutable escapedquotes = "\""; // char or string?
     Nullable!dchar state = ' '; // a little inefficient?
     auto pushback = DList!string(); // may be not the fastest
     uint lineno;
@@ -220,7 +220,7 @@ public:
     // TODO: Use empty string for None?
     Nullable!string read_token() {
         bool quoted = false;
-        char escapedstate = ' '; // TODO: use an enum
+        dchar escapedstate = ' '; // TODO: use an enum
         while (true) {
             Nullable!dchar nextchar; // FIXME: check if == works correctly below
             if (!punctuation_chars.empty && !_pushback_chars.empty) { // FIXME: check all .empty vs .isNull
@@ -257,19 +257,19 @@ public:
                     escapedstate = 'a';
                     state = nextchar;
                 } else if (wordchars.canFind(nextchar.get)) {
-                    token = nextchar;
+                    state = nextchar.get; // FIXME: check if .get is valid
                     state = 'a';
                 } else if (punctuation_chars.canFind(nextchar.get)) {
-                    token = nextchar;
+                    state = nextchar.get; // FIXME: check if .get is valid
                     state = 'c';
                 } else if (quotes.canFind(nextchar.get)) {
-                    if (!posix) token = nextchar;
+                    if (!posix) state = nextchar.get; // FIXME: check if .get is valid
                     state = nextchar;
                 } else if (whitespace_split) {
-                    token = nextchar;
+                    state = nextchar.get; // FIXME: check if .get is valid
                     state = 'a';
                 } else {
-                    token = nextchar;
+                    state = nextchar.get; // FIXME: check if .get is valid
                     if (token || (posix && quoted)) // FIXME: isNull empty?
                         break;   // emit current token
                     else
@@ -284,13 +284,13 @@ public:
                     throw new Exception("No closing quotation");
                 }
                 if (nextchar == state) {
-                    if (!self.posix) {
-                        self.token ~= nextchar;
-                        self.state = ' ';
+                    if (!posix) {
+                        token ~= nextchar;
+                        state = ' ';
                         break;
                     } else
                         state = 'a';
-                } else if (posix && escape.canFind(nextchar.get) && escapedquotes.canFind(state)) { // FIXME: None
+                } else if (posix && escape.canFind(nextchar.get) && escapedquotes.canFind(state.get)) { // FIXME: is .get valie?
                     escapedstate = state;
                     state = nextchar;
                 } else
@@ -305,18 +305,18 @@ public:
                 // In posix shells, only the quote itself or the escape
                 // character may be escaped within quotes.
                 if (quotes.canFind(escapedstate) && nextchar != state && nextchar != escapedstate)
-                    token ~= self.state;
+                    token ~= state;
                 token ~= nextchar;
                 state = escapedstate;
-            } else if (self.state in ['a', 'c']) {
+            } else if (!state.isNull && state.get == 'a' || state.get == 'c') {
                 if (nextchar.isNull) {
-                    state = None;   // end of file
+                    state = Nullable!dchar();   // end of file
                     break;
                 } else if (whitespace.canFind(nextchar.get)) {
                     if (debug_ >= 2)
                         writeln("shlex: I see whitespace in word state");
                     state = ' ';
-                    if (token || (self.posix && quoted))
+                    if (token || (posix && quoted))
                         break;   // emit current token
                     else
                         continue;
@@ -332,7 +332,7 @@ public:
                     }
                 } else if (state == 'c') {
                     if (punctuation_chars.canFind(nextchar.get))
-                        self.token ~= nextchar;
+                        token ~= nextchar;
                     else {
                         if (!whitespace.canFind(nextchar.get))
                             _pushback_chars.insertBack(nextchar);
