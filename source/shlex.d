@@ -289,19 +289,19 @@ public:
                     escapedstate = 'a';
                     state = nextchar;
                 } else if (wordchars.canFind(nextchar.get)) {
-                    state = nextchar.get; // FIXME: check if .get is valid
+                    state = nextchar.get;
                     state = 'a';
                 } else if (punctuation_chars.canFind(nextchar.get)) {
-                    state = nextchar.get; // FIXME: check if .get is valid
+                    state = nextchar.get;
                     state = 'c';
                 } else if (quotes.canFind(nextchar.get)) {
-                    if (!posix) state = nextchar.get; // FIXME: check if .get is valid
+                    if (!posix) state = nextchar.get;
                     state = nextchar;
                 } else if (whitespace_split) {
-                    state = nextchar.get; // FIXME: check if .get is valid
+                    state = nextchar.get;
                     state = 'a';
                 } else {
-                    state = nextchar.get; // FIXME: check if .get is valid
+                    state = nextchar.get;
                     if (token || (posix && quoted)) // FIXME: isNull empty?
                         break;   // emit current token
                     else
@@ -322,7 +322,8 @@ public:
                         break;
                     } else
                         state = 'a';
-                } else if (posix && escape.canFind(nextchar.get) && escapedquotes.canFind(state.get)) { // FIXME: is .get valid?
+                } else if (posix && !nextchar.isNull && escape.canFind(nextchar.get) &&
+                        !state.isNull && escapedquotes.canFind(state.get)) {
                     escapedstate = state;
                     state = nextchar;
                 } else
@@ -381,7 +382,7 @@ public:
                     token ~= nextchar;
                 else {
                     if (punctuation_chars.empty)
-                        pushback.insertFront(nextchar.get.to!string); // FIXME: is .get valid?
+                        pushback.insertFront(nextchar.get.to!string);
                     else
                         _pushback_chars.insertBack(nextchar);
                     if (debug_ >= 2)
