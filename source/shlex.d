@@ -23,6 +23,9 @@ module shlex;
 
 import std.typecons;
 import std.string;
+import std.regex;
+import std.range.interfaces;
+import std.container.dlist;
 
 // FIXME: camelCase
 
@@ -104,7 +107,7 @@ public:
     }
 
     /** Push a token onto the stack popped by the get_token method */
-    void push_token(tok) {
+    void push_token(string tok) {
         if (debug_ >= 1)
             writeln("shlex: pushing token " ~ tok); // FIXME: need toString?
         pushback.insertFront(tok);
@@ -374,7 +377,7 @@ public:
 }
 
 // TODO: Flag?
-string[] split(s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {
+string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {
     scope Shlex lex = shlex(s, posix);
     lex.whitespace_split = true;
     if (!comments)
@@ -385,7 +388,7 @@ string[] split(s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes
 private immutable _find_unsafe = regex(r"[^[a-zA-Z0-9]@%+=:,./-]");
 
 /** Return a shell-escaped version of the string *s*. */
-string quote(s) {
+string quote(string s) {
     if (s.empty)
         return "''";
     if (!mathFirst(s, _find_unsafe))
@@ -396,7 +399,7 @@ string quote(s) {
     return '\'' ~ s.replace("'", "'\"'\"'") ~ '\'';
 }
 
-private void _print_tokens(lexer) {
+private void _print_tokens(Shlex lexer) {
     while (true) {
         Nullable!string tt = lexer.get_token();
         if (!tt.isNull && !tt.empty) break; // TODO: can simplify?
