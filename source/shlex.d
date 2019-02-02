@@ -166,11 +166,11 @@ public:
             }
         }
         // Maybe we got EOF instead?
-        while isEof(raw) {
+        while (isEof(raw)) {
             if (filestack.empty)
                 return self.eof; // FIXME
             else {
-                pop_source()
+                pop_source();
                 raw = get_token();
             }
         }
@@ -198,7 +198,7 @@ public:
                     instream.popFront();
                 }
             }
-            if (nextchar == '\n'd)
+            if (nextchar == '\n')
                 lineno += 1;
             if (debug_ >= 3)
                 print("shlex: in state %s I see character: %s".format(self.state, nextchar));
@@ -207,7 +207,7 @@ public:
                 break;
             } else if (state == ' ') {
                 if (nextchar.isNull) {
-                    state = None  // end of file
+                    state = None;  // end of file
                     break;
                 } else if (whitespace.canFind(nextchar)) {
                     if (debug_ >= 2)
@@ -218,14 +218,14 @@ public:
                         continue;
                 } else if (commenters.canFind(nextchar)) {
                     instream.skipLine();
-                    lineno += 1
+                    lineno += 1;
                 } else if (posix && escape.canFind(nextchar)) {
                     escapedstate = 'a';
                     state = nextchar;
                 } else if (wordchars.canFind(nextchar)) {
                     token = nextchar;
                     state = 'a';
-                } else if punctuation_chars.canFind(nextchar)) {
+                } else if (punctuation_chars.canFind(nextchar)) {
                     token = nextchar;
                     state = 'c';
                 } else if (quotes.canFind(nextchar)) {
@@ -276,7 +276,7 @@ public:
                 state = escapedstate;
             } else if (self.state in ['a', 'c']) {
                 if (nextchar.isNull) {
-                    state = None   // end of file
+                    state = None;   // end of file
                     break;
                 } else if (whitespace.canFind(nextchar)) {
                     if (debug_ >= 2)
@@ -331,7 +331,7 @@ public:
         Nullable!string result = token;
         token = "";
         if (posix && !quoted && result == "") // FIXME: check result == ""
-            result = None
+            result = None;
         if (debug_ > 1) {
             if (!result.isNull && ! result.empty) // TODO: can simplify?
                 writeln("shlex: raw token=" ~ result);
@@ -342,13 +342,14 @@ public:
     }
 
     /** Hook called on a filename to be sourced.*/
-    auto sourcehook(string newfile):
+    auto sourcehook(string newfile) {
         if (newfile[0] == '"')
-            newfile = newfile[1..$-1]'
+            newfile = newfile[1..$-1];
         // This implements cpp-like semantics for relative-path inclusion.
         if (!isAbsolute(newfile))
             newfile = buildPath(dirName(infile), newfile);
         return tuple(newfile, File(newfile, "r"));
+    }
 
     /** Emit a C-compiler-like, Emacs-friendly error-message leader. */
     string error_leader(Nullable!string infile = Nullable!string(),
@@ -372,22 +373,21 @@ public:
     //    return token
 
 // TODO: Flag?
-string[] split(s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix):
+string[] split(s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {
     scope Shlex lex = shlex(s, posix);
     lex.whitespace_split = true;
     if (!comments)
         lex.commenters = "";
-    return lex.array
+    return lex.array;
 }
 
-// FIXME: 1. no ASCII in D; 2. search is a member
-immutable _find_unsafe = regex(r'[^\w@%+=:,./-]', re.ASCII).search;
+private immutable _find_unsafe = regex(r"[^[a-zA-Z0-9]@%+=:,./-]");
 
 /** Return a shell-escaped version of the string *s*. */
 string quote(s):
     if (s.empty):
         return "''";
-    if (_find_unsafe(s) is None) // FIXME
+    if (!mathFirst(s, _find_unsafe))
         return s;
 
     // use single quotes, and put single quotes into double quotes
