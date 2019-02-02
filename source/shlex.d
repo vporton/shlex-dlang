@@ -27,6 +27,7 @@ import std.string;
 import std.regex;
 import std.array;
 import std.range.interfaces;
+import std.range.primitives;
 import std.container.dlist;
 import std.algorithm;
 import std.file;
@@ -34,6 +35,8 @@ import std.path;
 import std.stdio : writeln;
 
 // FIXME: camelCase
+
+// TODO: use moveFront()/moveBack()
 
 // FIXME: https://stackoverflow.com/a/54475280/856090 instead of "in" operator
 
@@ -49,16 +52,40 @@ class ShlexFile : InputRange!dchar {
         text = readText(name);
     }
 
-    override @property bool empty() {
-        return text.empty;
-    }
-
     override @property dchar front() {
         return text.front;
     }
 
+    override dchar moveFront() {
+        return text.moveFront();
+    }
+
     override void popFront() {
         return text.popFront();
+    }
+
+    override @property bool empty() {
+        return text.empty;
+    }
+
+    override int opApply(scope int delegate(dchar) dg) {
+        int res;
+        for (auto r = text; !r.empty; r.popFront()) {
+            res = dg(r.front);
+            if (res) break;
+        }
+        return res;
+    }
+
+    override int opApply(scope int delegate(size_t, dchar) dg) {
+        int res;
+        size_t i = 0;
+        for (auto r = text; !r.empty; r.popFront()) {
+            res = dg(i, r.front);
+            if (res) break;
+            i++;
+        }
+        return res;
     }
 
     ///
@@ -215,6 +242,15 @@ public:
                 writeln("shlex: token=EOF");
         }
         return raw;
+    }
+
+    int opApply(scope int delegate(ref string) dg) {
+        int result = 0;
+        for (auto r = get_token(); !r.isNull; ) {
+            result = dg(r.get);
+            if (result) break;
+        }
+        return result;
     }
 
     // TODO: Use empty string for None?
@@ -407,7 +443,6 @@ public:
     //    return token
 }
 
-// TODO: Flag?
 string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {
     scope Shlex lex = Shlex(s, Nullable!string(), posix); // TODO: shorten
     lex.whitespace_split = true;
