@@ -166,7 +166,8 @@ public:
     void pop_source() {
         (cast(ShlexFile)instream).close(); // a little messy
         // use a tuple library?
-        immutable t = filestack.popFirstOf();
+        immutable t = filestack.front;
+        filestack.removeFront();
         infile   = t[0];
         instream = t[1];
         lineno   = t[2];
@@ -179,7 +180,8 @@ public:
     /** Get a token from the input stream (or from stack if it's nonempty) */
     Nullable!string get_token() {
         if (!pushback.empty) {
-            immutable tok = pushback.popFirstOf();
+            immutable tok = pushback.front;
+            pushback.removeFront();
             if (debug_ >= 1)
                 writeln("shlex: popping token " ~ tok);
             return tok;
