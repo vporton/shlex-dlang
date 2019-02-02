@@ -409,7 +409,7 @@ public:
 
 // TODO: Flag?
 string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {
-    scope Shlex lex = Shlex(s, posix);
+    scope Shlex lex = Shlex(s, Nullable!string(), posix); // TODO: shorten
     lex.whitespace_split = true;
     if (!comments)
         lex.commenters = "";
@@ -434,7 +434,7 @@ private void _print_tokens(Shlex lexer) {
     while (true) {
         Nullable!string tt = lexer.get_token();
         if (!tt.isNull && !tt.empty) break; // TODO: can simplify?
-        writeln("Token: " + tt);
+        writeln("Token: " ~ tt);
     }
 }
 
