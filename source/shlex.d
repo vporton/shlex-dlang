@@ -30,6 +30,7 @@ import std.range.interfaces;
 import std.container.dlist;
 import std.algorithm;
 import std.file;
+import std.path;
 import std.stdio : writeln;
 
 // FIXME: camelCase
@@ -79,7 +80,8 @@ private:
     ShlexStream instream;
     Nullable!string infile;
     Posix posix;
-    bool delegate(string token) isEof;
+    Nullable!string eof; // seems not efficient
+    //bool delegate(string token) isEof;
     string commenters = "#";
     string wordchars;
     static immutable whitespace = " \t\r\n";
@@ -87,7 +89,7 @@ private:
     static immutable quotes = "'\"";
     static immutable escape = '\\'; // TODO: char or string?
     static immutable escapedquotes = '"'; // TODO: char or string?
-    char state = ' '; // TODO: also support None
+    Nullable!char state = ' '; // a little inefficient?
     auto pushback = DList!string(); // may be not the fastest
     uint lineno;
     ubyte debug_ = 0;
@@ -116,12 +118,7 @@ public:
         this.instream = instream;
         this.infile = infile;
         this.posix = posix;
-        isEof = posix ? (string) => false : (string s) => s.empty;
-        // TODO: remove commented code
-        //if posix:
-        //    self.eof = None
-        //else:
-        //    self.eof = ''
+        if (!posix) eof = "";
         wordchars = "abcdfeghijklmnopqrstuvwxyz" ~ "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
         if (posix)
             wordchars ~= "ßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" ~ "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ";
@@ -166,7 +163,7 @@ public:
     void pop_source() {
         (cast(ShlexFile)instream).close(); // a little messy
         // use a tuple library?
-        immutable t = filestack.front;
+        auto t = filestack.front;
         filestack.removeFront();
         infile   = t[0];
         instream = t[1];
@@ -177,33 +174,34 @@ public:
     }
 
     // TODO: Use empty string for None?
-    /** Get a token from the input stream (or from stack if it's nonempty) */
+    /** Get a token from the input stream (or from stack if it's nonempty).
+        Returns null value on eof. */
     Nullable!string get_token() {
         if (!pushback.empty) {
             immutable tok = pushback.front;
             pushback.removeFront();
             if (debug_ >= 1)
                 writeln("shlex: popping token " ~ tok);
-            return tok;
+            return Nullable!string(tok);
         }
         // No pushback.  Get a token.
         Nullable!string raw = read_token();
         // Handle inclusions
         if (!source.empty) {
             while (raw == source) {
-                immutable spec = sourcehook(read_token());
+                auto spec = sourcehook(read_token());
                 if (!spec.empty) {
-                    immutable newfile   = spec[0];
-                    immutable newstream = spec[1];
-                    push_source(newstream, newfile);
+                    auto newfile   = spec[0];
+                    auto newstream = spec[1];
+                    push_source(newstream, Nullable!string(newfile));
                 }
                 raw = get_token();
             }
         }
         // Maybe we got EOF instead?
-        while (isEof(raw)) {
+        while (eof == raw) {
             if (filestack.empty)
-                return self.eof; // FIXME
+                return eof;
             else {
                 pop_source();
                 raw = get_token();
@@ -211,10 +209,10 @@ public:
         }
         // Neither inclusion nor EOF
         if (debug_ >= 1) {
-            if (!isEof(raw))
-                print("shlex: token=" ~ raw);
+            if (eof != raw)
+                writeln("shlex: token=" ~ raw);
             else
-                print("shlex: token=EOF");
+                writeln("shlex: token=EOF");
         }
         return raw;
     }
@@ -225,10 +223,11 @@ public:
         char escapedstate = ' '; // TODO: use an enum
         while (true) {
             Nullable!dchar nextchar; // FIXME: check if == works correctly below
-            if (!punctuation_chars.isNull && !_pushback_chars.empty) // FIXME: check all .empty vs .isNull
-                nextchar = _pushback_chars.poplastOf();
-            else {
-                if (!insream.empty) {
+            if (!punctuation_chars.empty && !_pushback_chars.empty) { // FIXME: check all .empty vs .isNull
+                nextchar = _pushback_chars.back;
+                _pushback_chars.removeBack();
+            } else {
+                if (!instream.empty) {
                     nextchar = instream.front;
                     instream.popFront();
                 }
@@ -236,13 +235,13 @@ public:
             if (nextchar == '\n')
                 lineno += 1;
             if (debug_ >= 3)
-                print("shlex: in state %s I see character: %s".format(self.state, nextchar));
-            if (state == None) { // FIXME
+                writeln("shlex: in state %s I see character: %s".format(state, nextchar));
+            if (state.isNull) {
                 token = "";        // past end of file
                 break;
             } else if (state == ' ') {
                 if (nextchar.isNull) {
-                    state = None;  // end of file
+                    state = Nullable!char();  // end of file
                     break;
                 } else if (whitespace.canFind(nextchar)) {
                     if (debug_ >= 2)
@@ -383,7 +382,7 @@ public:
         // This implements cpp-like semantics for relative-path inclusion.
         if (!isAbsolute(newfile))
             newfile = buildPath(dirName(infile), newfile);
-        return tuple(newfile, ShlexFile(newfile));
+        return tuple(newfile, new ShlexFile(newfile));
     }
 
     /** Emit a C-compiler-like, Emacs-friendly error-message leader. */
