@@ -22,10 +22,15 @@ Copyright © 2001-2019 Python Software Foundation; All Rights Reserved
 module shlex;
 
 import std.typecons;
+import std.conv;
 import std.string;
 import std.regex;
+import std.array;
 import std.range.interfaces;
 import std.container.dlist;
+import std.algorithm;
+import std.file;
+import std.stdio : writeln;
 
 // FIXME: camelCase
 
@@ -34,6 +39,30 @@ import std.container.dlist;
 // TODO: += 1 -> ++
 
 alias ShlexStream = InputRange!dchar; // Unicode stream
+
+class ShlexFile : InputRange!dchar {
+    private string text;
+
+    /// The current version reads the file entirely
+    this(string name) {
+        text = readText(name);
+    }
+
+    override @property bool empty() {
+        return text.empty;
+    }
+
+    override @property dchar front() {
+        return text.front;
+    }
+
+    override void popFront() {
+        return text.popFront();
+    }
+
+    ///
+    void close() { } // we have already read the file
+}
 
 private void skipLine(ShlexStream stream) {
     while (!stream.empty && stream.front == '\n') stream.popFront();
@@ -102,7 +131,8 @@ public:
             // these chars added because allowed in file names, args, wildcards
             wordchars ~= "~-./*?=";
             // remove any punctuation chars from wordchars
-            wordchars = wordchars.filter(c => !punctuation_chars.canFind(c));
+            // TODO: Isn't it better to use dstring?
+            wordchars = filter!(c => !this.punctuation_chars.canFind(c))(wordchars).array.to!string;
         }
     }
 
@@ -134,7 +164,7 @@ public:
 
     /** Pop the input source stack. */
     void pop_source() {
-        (cast(File)instream).close(); // a little messy
+        (cast(ShlexFile)instream).close(); // a little messy
         // use a tuple library?
         immutable t = filestack.popFirstOf();
         infile   = t[0];
@@ -351,7 +381,7 @@ public:
         // This implements cpp-like semantics for relative-path inclusion.
         if (!isAbsolute(newfile))
             newfile = buildPath(dirName(infile), newfile);
-        return tuple(newfile, File(newfile, "r"));
+        return tuple(newfile, ShlexFile(newfile));
     }
 
     /** Emit a C-compiler-like, Emacs-friendly error-message leader. */
