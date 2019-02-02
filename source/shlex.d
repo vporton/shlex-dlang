@@ -38,10 +38,6 @@ import std.stdio : writeln;
 
 // TODO: use moveFront()/moveBack()
 
-// FIXME: https://stackoverflow.com/a/54475280/856090 instead of "in" operator
-
-// TODO: += 1 -> ++
-
 alias ShlexStream = InputRange!dchar; // Unicode stream
 
 class ShlexFile : InputRange!dchar {
@@ -163,7 +159,7 @@ public:
     /** Push a token onto the stack popped by the get_token method */
     void push_token(string tok) {
         if (debug_ >= 1)
-            writeln("shlex: pushing token " ~ tok); // FIXME: need toString?
+            writeln("shlex: pushing token " ~ tok);
         pushback.insertFront(tok);
     }
 
@@ -269,7 +265,7 @@ public:
                 }
             }
             if (nextchar == '\n')
-                lineno += 1;
+                ++lineno;
             if (debug_ >= 3)
                 writeln("shlex: in state %s I see character: %s".format(state, nextchar));
             if (state.isNull) {
@@ -288,7 +284,7 @@ public:
                         continue;
                 } else if (commenters.canFind(nextchar.get)) {
                     instream.skipLine();
-                    lineno += 1;
+                    ++lineno;
                 } else if (posix && escape.canFind(nextchar.get)) {
                     escapedstate = 'a';
                     state = nextchar;
@@ -326,7 +322,7 @@ public:
                         break;
                     } else
                         state = 'a';
-                } else if (posix && escape.canFind(nextchar.get) && escapedquotes.canFind(state.get)) { // FIXME: is .get valie?
+                } else if (posix && escape.canFind(nextchar.get) && escapedquotes.canFind(state.get)) { // FIXME: is .get valid?
                     escapedstate = state;
                     state = nextchar;
                 } else
@@ -358,7 +354,7 @@ public:
                         continue;
                 } else if (commenters.canFind(nextchar.get)) {
                     instream.skipLine();
-                    lineno += 1;
+                    ++lineno;
                     if (posix) {
                         state = ' ';
                         if (!token.empty || (posix && quoted))
