@@ -302,7 +302,7 @@ public:
                     state = 'a';
                 } else {
                     state = nextchar.get;
-                    if (token || (posix && quoted)) // FIXME: isNull empty?
+                    if (!token.empty || (posix && quoted))
                         break;   // emit current token
                     else
                         continue;
