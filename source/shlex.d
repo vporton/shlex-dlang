@@ -455,8 +455,7 @@ unittest {
     setrlimit(RLIMIT_AS, &limit); // prevent OS crash due out of memory
 
     assert(split("") == []);
-    //writeln(split("l")); // FIXME: prints []
-    assert(split("l") == ["l"]); // causes memory overflow
+    assert(split("l") == ["l"]);
     //assert(split("ls") == ["ls"]); // causes memory overflow
 //    assert(split("ls -l 'somefile; ls -xz ~'") == ["ls", "-l", "somefile; ls -xz ~"]);
 //    assert(split("ssh home 'somefile; ls -xz ~'") == ["ssh", "home", "somefile; ls -xz ~"]);
