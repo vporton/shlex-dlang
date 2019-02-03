@@ -6,7 +6,6 @@
   "authors" : [
     "Victor Porton"
   ],
-  "targetType" : "library",
   "configurations": [
     {
       "name": "application",
