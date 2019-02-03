@@ -210,7 +210,7 @@ public:
         // No pushback.  Get a token.
         Nullable!string raw = read_token();
         // Handle inclusions
-        if (!source.empty) {
+        if (!source.isNull && !source.empty) {
             while (raw == source) {
                 auto spec = sourcehook(read_token());
                 if (!spec.empty) {
@@ -255,7 +255,7 @@ public:
         dchar escapedstate = ' '; // TODO: use an enum
         while (true) {
             Nullable!dchar nextchar; // FIXME: check if == works correctly below
-            if (!punctuation_chars.empty && !_pushback_chars.empty) { // FIXME: check all .empty vs .isNull
+            if (!punctuation_chars.empty && !_pushback_chars.empty) {
                 nextchar = _pushback_chars.back;
                 _pushback_chars.removeBack();
             } else {
