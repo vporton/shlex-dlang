@@ -449,6 +449,13 @@ string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posi
 }
 
 unittest {
+    // FIXME
+    import core.sys.posix.sys.resource;
+    auto limit = rlimit(100*1000000, 100*1000000);
+    setrlimit(RLIMIT_AS, &limit); // prevent OS crash due out of memory
+
+    assert(split("") == [""]);
+    assert(split("ls") == ["ls"]); // causes memory overflow
     assert(split("ls -l 'somefile; ls -xz ~'") == ["ls", "-l", "somefile; ls -xz ~"]);
     assert(split("ssh home 'somefile; ls -xz ~'") == ["ssh", "home", "somefile; ls -xz ~"]);
 }
