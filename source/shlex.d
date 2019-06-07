@@ -397,8 +397,10 @@ public:
         }
         Nullable!string result = token;
         token = "";
-        if (posix && !quoted && result == "") // FIXME: check result == ""
+        if (posix && !quoted && result == "") {
             result = Nullable!string();
+            writeln(result.isNull); // FIXME: remove
+        }
         if (debug_ > 1) {
             if (!result.isNull && !result.empty) // TODO: can simplify?
                 writeln("shlex: raw token=" ~ result);
