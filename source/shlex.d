@@ -24,6 +24,7 @@ module shlex;
 import std.typecons;
 import std.conv;
 import std.string;
+import std.utf;
 import std.regex;
 import std.array;
 import std.range.interfaces;
@@ -296,19 +297,19 @@ public:
                     escapedstate = 'a';
                     state = nextchar;
                 } else if (wordchars.canFind(nextchar.get)) {
-                    state = nextchar.get;
+                    token = [nextchar.get].toUTF8;
                     state = 'a';
                 } else if (punctuation_chars.canFind(nextchar.get)) {
-                    state = nextchar.get;
+                    token = [nextchar.get].toUTF8;
                     state = 'c';
                 } else if (quotes.canFind(nextchar.get)) {
-                    if (!posix) state = nextchar.get;
+                    if (!posix) token = [nextchar.get].toUTF8;
                     state = nextchar;
                 } else if (whitespace_split) {
-                    state = nextchar.get;
+                    token = [nextchar.get].toUTF8;
                     state = 'a';
                 } else {
-                    state = nextchar.get;
+                    token = [nextchar.get].toUTF8;
                     if (!token.empty || (posix && quoted))
                         break;   // emit current token
                     else
@@ -350,6 +351,7 @@ public:
                 state = escapedstate;
             } else if (!state.isNull && (state.get == 'a' || state.get == 'c')) {
                 write("1: "); dump();
+                writeln("nexchar=", nextchar);
                 if (nextchar.isNull) {
                     state = Nullable!dchar();   // end of file
                     break;
