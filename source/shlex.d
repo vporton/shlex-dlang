@@ -251,6 +251,7 @@ public:
     int opApply(scope int delegate(ref string) dg) {
         int result = 0;
         for (auto r = get_token(); !r.isNull; ) {
+            writeln("Got ", r);
             result = dg(r.get);
             if (result) break;
         }
@@ -262,6 +263,10 @@ public:
         bool quoted = false;
         dchar escapedstate = ' '; // TODO: use an enum
         while (true) {
+            if(debug_ >= 3) {
+                write("Iteration ");
+                dump();
+            }
             Nullable!dchar nextchar; // FIXME: check if == works correctly below
             if (!punctuation_chars.empty && !_pushback_chars.empty) {
                 nextchar = _pushback_chars.back;
@@ -277,6 +282,7 @@ public:
             if (debug_ >= 3)
                 writeln("shlex: in state %s I see character: %s".format(state, nextchar));
             if (state.isNull) {
+                // FIXME: This is never reached.
                 token = "";        // past end of file
                 break;
             } else if (state == ' ') {
@@ -351,7 +357,7 @@ public:
                 state = escapedstate;
             } else if (!state.isNull && (state.get == 'a' || state.get == 'c')) {
                 write("1: "); dump();
-                writeln("nexchar=", nextchar);
+                writeln("nextchar=", nextchar);
                 if (nextchar.isNull) {
                     state = Nullable!dchar();   // end of file
                     break;
