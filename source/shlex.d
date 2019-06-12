@@ -494,8 +494,9 @@ string quote(string s) {
 }
 
 unittest {
-    // FIXME
+    assert(quote("") == "''");
     assert(quote("somefile; ls -xz ~") == "'somefile; ls -xz ~'");
+    writeln(quote("'") == "''\"'\"''"); // TODO: Too long result (as inherited from the Python library)
 }
 
 private void _print_tokens(Shlex lexer) {
