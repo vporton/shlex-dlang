@@ -115,7 +115,7 @@ private:
     Nullable!dchar state = ' '; // a little inefficient?
     auto pushback = DList!string(); // may be not the fastest
     uint lineno;
-    ubyte debug_ = 0;
+    ubyte debug_ = 2; // FIXME: Should be 0 by default
     string token = "";
     auto filestack = DList!(Tuple!(Nullable!string, ShlexStream, uint))(); // may be not the fastest
     Nullable!string source; // TODO: Represent no source just as an empty string?
@@ -396,11 +396,10 @@ public:
             }
         }
         Nullable!string result = token;
+        //writeln('['~token~']');
         token = "";
-        if (posix && !quoted && result == "") {
+        if (posix && !quoted && result == "")
             result = Nullable!string();
-            writeln(result.isNull); // FIXME: remove
-        }
         if (debug_ > 1) {
             if (!result.isNull && !result.empty) // TODO: can simplify?
                 writeln("shlex: raw token=" ~ result);
