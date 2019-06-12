@@ -1,7 +1,6 @@
 module shlex_main;
 
 import std.stdio;
-import std.conv;
 import std.typecons;
 import shlex;
 
@@ -12,6 +11,6 @@ void main(string[] args)
     else {
         immutable filename = args[1];
         scope File file = File(filename, "r");
-        _print_tokens(*new Shlex(file.dtext, Nullable!string(filename)));
+        _print_tokens(*new Shlex(file, Nullable!string(filename)));
     }
 }

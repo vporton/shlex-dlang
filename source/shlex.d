@@ -125,14 +125,6 @@ private:
     auto _pushback_chars = DList!dchar(); // may be not the fastest
 
 public:
-    this(Stream)(Stream instream,
-                 Nullable!string infile = Nullable!string(),
-                 Posix posix = No.posix,
-                 PunctuationChars punctuation_chars = No.punctuationChars)
-    {
-        this(inputRangeObject(instream), infile, posix, punctuation_chars);
-    }
-
     /** We don't support implicit stdin as `instream` as in Python. */
     this(ShlexStream instream,
          Nullable!string infile = Nullable!string(),
@@ -155,6 +147,16 @@ public:
             // TODO: Isn't it better to use dstring?
             wordchars = filter!(c => !this.punctuation_chars.canFind(c))(wordchars).array.to!string;
         }
+    }
+
+    this(Stream)(Stream instream,
+                 Nullable!string infile = Nullable!string(),
+                 Posix posix = No.posix,
+                 PunctuationChars punctuation_chars = No.punctuationChars)
+    {
+        import std.conv;
+        // TODO: Inefficient to convert to dstring in memory.
+        this(cast (ShlexStream)inputRangeObject(instream.dtext), infile, posix, punctuation_chars);
     }
 
     void dump() {
