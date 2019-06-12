@@ -495,7 +495,7 @@ string quote(string s) {
 
 unittest {
     // FIXME
-//    assert(quote("somefile; ls -xz ~") == "'somefile; ls -xz ~'");
+    assert(quote("somefile; ls -xz ~") == "'somefile; ls -xz ~'");
 }
 
 private void _print_tokens(Shlex lexer) {
