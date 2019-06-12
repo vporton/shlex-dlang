@@ -32,7 +32,7 @@ import std.container.dlist;
 import std.algorithm;
 import std.file;
 import std.path;
-import std.stdio : writeln;
+import std.stdio : write, writeln;
 
 // FIXME: camelCase
 
@@ -115,7 +115,7 @@ private:
     Nullable!dchar state = ' '; // a little inefficient?
     auto pushback = DList!string(); // may be not the fastest
     uint lineno;
-    ubyte debug_ = 2; // FIXME: Should be 0 by default
+    ubyte debug_ = 3; // FIXME: Should be 0 by default
     string token = "";
     auto filestack = DList!(Tuple!(Nullable!string, ShlexStream, uint))(); // may be not the fastest
     Nullable!string source; // TODO: Represent no source just as an empty string?
@@ -153,6 +153,13 @@ public:
             // remove any punctuation chars from wordchars
             // TODO: Isn't it better to use dstring?
             wordchars = filter!(c => !this.punctuation_chars.canFind(c))(wordchars).array.to!string;
+        }
+    }
+
+    void dump() {
+        if (debug_ >= 3) {
+//            writeln("state='", state, "\' nextchar='", nextchar, "\' token='", token, '\'');
+            writeln("state='", state, "\' token='", token, '\'');
         }
     }
 
@@ -341,7 +348,8 @@ public:
                     token ~= state;
                 token ~= nextchar;
                 state = escapedstate;
-            } else if (!state.isNull && state.get == 'a' || state.get == 'c') {
+            } else if (!state.isNull && (state.get == 'a' || state.get == 'c')) {
+                write("1: "); dump();
                 if (nextchar.isNull) {
                     state = Nullable!dchar();   // end of file
                     break;
@@ -377,10 +385,10 @@ public:
                 else if (posix && escape.canFind(nextchar.get)) {
                     escapedstate = 'a';
                     state = nextchar;
-                } else if (wordchars.canFind(nextchar.get) || quotes.canFind(nextchar.get)
-                      || whitespace_split)
+                } else if (wordchars.canFind(nextchar.get) || quotes.canFind(nextchar.get) || whitespace_split) {
+                    write("2: "); dump(); // TODO: not reached
                     token ~= nextchar;
-                else {
+                } else {
                     if (punctuation_chars.empty)
                         pushback.insertFront(nextchar.get.to!string);
                     else
@@ -455,8 +463,9 @@ unittest {
     auto limit = rlimit(100*1000000, 100*1000000);
     setrlimit(RLIMIT_AS, &limit); // prevent OS crash due out of memory
 
-    assert(split("") == []);
-    assert(split("l") == ["l"]);
+    //assert(split("") == []);
+    writeln(split("l"));
+    //assert(split("l") == ["l"]);
     //assert(split("ls") == ["ls"]); // causes memory overflow
 //    assert(split("ls -l 'somefile; ls -xz ~'") == ["ls", "-l", "somefile; ls -xz ~"]);
 //    assert(split("ssh home 'somefile; ls -xz ~'") == ["ssh", "home", "somefile; ls -xz ~"]);
