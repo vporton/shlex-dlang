@@ -6,21 +6,32 @@
   "authors" : [
     "Victor Porton"
   ],
-  "configurations": [
+  "targetType": "none",
+  "subPackages": [
     {
-      "name": "application",
-      "targetType": "executable",
-      "sourceFiles": [
-        "test.d"
+      "name": "library",
+      "description": "Shlex library",
+      "tagetName": "library",
+      "configurations": [
+        {
+          "name": "application",
+          "targetType": "executable",
+          "sourceFiles": [
+            "test.d"
+          ]
+        },
+        {
+          "name": "shared-library",
+          "targetType": "dynamicLibrary"
+        },
+        {
+          "name": "static-library",
+          "targetType": "staticLibrary"
+        }
       ]
-    },
-    {
-      "name": "shared-library",
-      "targetType": "dynamicLibrary"
-    },
-    {
-      "name": "static-library",
-      "targetType": "staticLibrary"
     }
-  ]
+  ],
+  "dependencies": {
+    "shlex:library": "*",
+  }
 }
