@@ -499,20 +499,11 @@ unittest {
     writeln(quote("'") == "''\"'\"''"); // TODO: Too long result (as inherited from the Python library)
 }
 
-private void _print_tokens(Shlex lexer) {
+void _print_tokens(Shlex lexer) {
     while (true) {
         Nullable!string tt = lexer.get_token();
         if (!tt.isNull && !tt.empty) break; // TODO: can simplify?
         writeln("Token: " ~ tt);
     }
 }
-
-// TODO
-//if __name__ == '__main__':
-//    if len(sys.argv) == 1:
-//        _print_tokens(shlex())
-//    else:
-//        fn = sys.argv[1]
-//        with open(fn) as f:
-//            _print_tokens(shlex(f, fn))
 

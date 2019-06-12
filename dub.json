@@ -1,9 +1,9 @@
 {
-  "name" : "shlex",
-  "description" : "Simple shell-like lexical analysis library",
-  "homepage" : "https://github.com/vporton/shlex-dlang",
-  "license" : "GPL-3.0 or later",
-  "authors" : [
+  "name": "shlex",
+  "description": "Simple shell-like lexical analysis library",
+  "homepage": "https://github.com/vporton/shlex-dlang",
+  "license": "GPL-3.0 or later",
+  "authors": [
     "Victor Porton"
   ],
   "targetType": "none",
@@ -29,9 +29,27 @@
           "targetType": "staticLibrary"
         }
       ]
+    },
+    {
+      "name": "shlex",
+      "description": "Shlex lexer (test)",
+      "tagetName": "shlex",
+      "configurations": [
+        {
+          "name": "application",
+          "targetType": "executable",
+          "sourceFiles": [
+            "shlex-main.d"
+          ]
+        }
+      ],
+      "dependencies": {
+        "shlex:library": "*",
+      }
     }
   ],
   "dependencies": {
     "shlex:library": "*",
+    "shlex:shlex": "*",
   }
 }
