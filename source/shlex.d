@@ -250,7 +250,9 @@ public:
 
     int opApply(scope int delegate(ref string) dg) {
         int result = 0;
-        for (auto r = get_token(); !r.isNull; ) {
+        while (true) {
+            auto r = get_token();
+            if (r.isNull) break;
             writeln("Got ", r);
             result = dg(r.get);
             if (result) break;
@@ -471,9 +473,8 @@ unittest {
     auto limit = rlimit(100*1000000, 100*1000000);
     setrlimit(RLIMIT_AS, &limit); // prevent OS crash due out of memory
 
-    //assert(split("") == []);
-    writeln(split("l"));
-    //assert(split("l") == ["l"]);
+    assert(split("") == []);
+    assert(split("l") == ["l"]);
     //assert(split("ls") == ["ls"]); // causes memory overflow
 //    assert(split("ls -l 'somefile; ls -xz ~'") == ["ls", "-l", "somefile; ls -xz ~"]);
 //    assert(split("ssh home 'somefile; ls -xz ~'") == ["ssh", "home", "somefile; ls -xz ~"]);
