@@ -109,7 +109,7 @@ private:
     string commenters = "#";
     string wordchars;
     static immutable whitespace = " \t\r\n";
-    bool whitespace_split = false;
+    bool whitespaceSplit = false;
     static immutable quotes = "'\"";
     static immutable escape = "\\"; // char or string?
     static immutable escapedquotes = "\""; // char or string?
@@ -120,16 +120,16 @@ private:
     string token = "";
     auto filestack = DList!(Tuple!(Nullable!string, ShlexStream, uint))(); // may be not the fastest
     Nullable!string source; // TODO: Represent no source just as an empty string?
-    string punctuation_chars;
-    // _pushback_chars is a push back queue used by lookahead logic
-    auto _pushback_chars = DList!dchar(); // may be not the fastest
+    string punctuationChars;
+    // _pushbackChars is a push back queue used by lookahead logic
+    auto _pushbackChars = DList!dchar(); // may be not the fastest
 
 public:
     /** We don't support implicit stdin as `instream` as in Python. */
     this(ShlexStream instream,
          Nullable!string infile = Nullable!string(),
          Posix posix = No.posix,
-         PunctuationChars punctuation_chars = No.punctuationChars)
+         PunctuationChars punctuationChars = No.punctuationChars)
     {
         this.instream = instream;
         this.infile = infile;
@@ -139,24 +139,24 @@ public:
         if (posix)
             wordchars ~= "ßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" ~ "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ";
         lineno = 1;
-        this.punctuation_chars = punctuation_chars ? "();<>|&" : "";
-        if (punctuation_chars) {
+        this.punctuationChars = punctuationChars ? "();<>|&" : "";
+        if (punctuationChars) {
             // these chars added because allowed in file names, args, wildcards
             wordchars ~= "~-./*?=";
             // remove any punctuation chars from wordchars
             // TODO: Isn't it better to use dstring?
-            wordchars = filter!(c => !this.punctuation_chars.canFind(c))(wordchars).array.to!string;
+            wordchars = filter!(c => !this.punctuationChars.canFind(c))(wordchars).array.to!string;
         }
     }
 
     this(Stream)(Stream instream,
                  Nullable!string infile = Nullable!string(),
                  Posix posix = No.posix,
-                 PunctuationChars punctuation_chars = No.punctuationChars)
+                 PunctuationChars punctuationChars = No.punctuationChars)
     {
         import std.conv;
         // TODO: Inefficient to convert to dstring in memory.
-        this(cast (ShlexStream)inputRangeObject(instream.dtext), infile, posix, punctuation_chars);
+        this(cast (ShlexStream)inputRangeObject(instream.dtext), infile, posix, punctuationChars);
     }
 
     void dump() {
@@ -166,20 +166,20 @@ public:
         }
     }
 
-    /** Push a token onto the stack popped by the get_token method */
-    void push_token(string tok) {
+    /** Push a token onto the stack popped by the getToken method */
+    void pushToken(string tok) {
         if (debug_ >= 1)
             writeln("shlex: pushing token " ~ tok);
         pushback.insertFront(tok);
     }
 
     /** Push an input source onto the lexer's input source stack. */
-    void push_source(Stream)(Stream newstream, Nullable!string newfile = Nullable!string()) {
-        push_source(inputRangeObject(instream), newfile);
+    void pushSource(Stream)(Stream newstream, Nullable!string newfile = Nullable!string()) {
+        pushSource(inputRangeObject(instream), newfile);
     }
 
     /** Push an input source onto the lexer's input source stack. */
-    void push_source(ShlexStream newstream, Nullable!string newfile = Nullable!string()) {
+    void pushSource(ShlexStream newstream, Nullable!string newfile = Nullable!string()) {
         filestack.insertFront(tuple(this.infile, this.instream, this.lineno));
         this.infile = newfile;
         this.instream = newstream;
@@ -193,7 +193,7 @@ public:
     }
 
     /** Pop the input source stack. */
-    void pop_source() {
+    void popSource() {
         (cast(ShlexFile)instream).close(); // a little messy
         // use a tuple library?
         auto t = filestack.front;
@@ -209,7 +209,7 @@ public:
     // TODO: Use empty string for None?
     /** Get a token from the input stream (or from stack if it's nonempty).
         Returns null value on eof. */
-    Nullable!string get_token() {
+    Nullable!string getToken() {
         if (!pushback.empty) {
             immutable tok = pushback.front;
             pushback.removeFront();
@@ -218,17 +218,17 @@ public:
             return Nullable!string(tok);
         }
         // No pushback.  Get a token.
-        Nullable!string raw = read_token();
+        Nullable!string raw = readToken();
         // Handle inclusions
         if (!source.isNull && !source.empty) {
             while (raw == source) {
-                auto spec = sourcehook(read_token());
+                auto spec = sourcehook(readToken());
                 if (!spec.empty) {
                     auto newfile   = spec[0];
                     auto newstream = spec[1];
-                    push_source(newstream, Nullable!string(newfile));
+                    pushSource(newstream, Nullable!string(newfile));
                 }
-                raw = get_token();
+                raw = getToken();
             }
         }
         // Maybe we got EOF instead?
@@ -236,8 +236,8 @@ public:
             if (filestack.empty)
                 return eof;
             else {
-                pop_source();
-                raw = get_token();
+                popSource();
+                raw = getToken();
             }
         }
         // Neither inclusion nor EOF
@@ -253,7 +253,7 @@ public:
     int opApply(scope int delegate(ref string) dg) {
         int result = 0;
         while (true) {
-            auto r = get_token();
+            auto r = getToken();
             if (r.isNull) break;
             writeln("Got ", r);
             result = dg(r.get);
@@ -263,7 +263,7 @@ public:
     }
 
     // TODO: Use empty string for None?
-    Nullable!string read_token() {
+    Nullable!string readToken() {
         bool quoted = false;
         dchar escapedstate = ' '; // TODO: use an enum
         while (true) {
@@ -272,9 +272,9 @@ public:
                 dump();
             }
             Nullable!dchar nextchar; // FIXME: check if == works correctly below
-            if (!punctuation_chars.empty && !_pushback_chars.empty) {
-                nextchar = _pushback_chars.back;
-                _pushback_chars.removeBack();
+            if (!punctuationChars.empty && !_pushbackChars.empty) {
+                nextchar = _pushbackChars.back;
+                _pushbackChars.removeBack();
             } else {
                 if (!instream.empty) {
                     nextchar = instream.front;
@@ -309,13 +309,13 @@ public:
                 } else if (wordchars.canFind(nextchar.get)) {
                     token = [nextchar.get].toUTF8;
                     state = 'a';
-                } else if (punctuation_chars.canFind(nextchar.get)) {
+                } else if (punctuationChars.canFind(nextchar.get)) {
                     token = [nextchar.get].toUTF8;
                     state = 'c';
                 } else if (quotes.canFind(nextchar.get)) {
                     if (!posix) token = [nextchar.get].toUTF8;
                     state = nextchar;
-                } else if (whitespace_split) {
+                } else if (whitespaceSplit) {
                     token = [nextchar.get].toUTF8;
                     state = 'a';
                 } else {
@@ -384,11 +384,11 @@ public:
                             continue;
                     }
                 } else if (state == 'c') {
-                    if (punctuation_chars.canFind(nextchar.get))
+                    if (punctuationChars.canFind(nextchar.get))
                         token ~= nextchar;
                     else {
                         if (!whitespace.canFind(nextchar.get))
-                            _pushback_chars.insertBack(nextchar);
+                            _pushbackChars.insertBack(nextchar);
                         state = ' ';
                         break;
                     }
@@ -397,14 +397,14 @@ public:
                 else if (posix && escape.canFind(nextchar.get)) {
                     escapedstate = 'a';
                     state = nextchar;
-                } else if (wordchars.canFind(nextchar.get) || quotes.canFind(nextchar.get) || whitespace_split) {
+                } else if (wordchars.canFind(nextchar.get) || quotes.canFind(nextchar.get) || whitespaceSplit) {
                     write("2: "); dump(); // TODO: not reached
                     token ~= nextchar;
                 } else {
-                    if (punctuation_chars.empty)
+                    if (punctuationChars.empty)
                         pushback.insertFront(nextchar.get.to!string);
                     else
-                        _pushback_chars.insertBack(nextchar);
+                        _pushbackChars.insertBack(nextchar);
                     if (debug_ >= 2)
                         writeln("shlex: I see punctuation in word state");
                     state = ' ';
@@ -440,7 +440,7 @@ public:
     }
 
     /** Emit a C-compiler-like, Emacs-friendly error-message leader. */
-    string error_leader(Nullable!string infile = Nullable!string(),
+    string errorLeader(Nullable!string infile = Nullable!string(),
                         Nullable!uint lineno=Nullable!uint())
     {
         if (infile.isNull)
@@ -463,7 +463,7 @@ public:
 
 string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {
     scope Shlex lex = Shlex(s, Nullable!string(), posix); // TODO: shorten
-    lex.whitespace_split = true;
+    lex.whitespaceSplit = true;
     if (!comments)
         lex.commenters = "";
     return lex.array;
@@ -481,13 +481,13 @@ unittest {
     assert(split("ssh home 'somefile; ls -xz ~'") == ["ssh", "home", "somefile; ls -xz ~"]);
 }
 
-private immutable _find_unsafe = regex(r"[^[a-zA-Z0-9]@%+=:,./-]");
+private immutable _findUnsafe = regex(r"[^[a-zA-Z0-9]@%+=:,./-]");
 
 /** Return a shell-escaped version of the string *s*. */
 string quote(string s) {
     if (s.empty)
         return "''";
-    if (!matchFirst(s, _find_unsafe))
+    if (!matchFirst(s, _findUnsafe))
         return s;
 
     // use single quotes, and put single quotes into double quotes
@@ -501,9 +501,9 @@ unittest {
     writeln(quote("'") == "''\"'\"''"); // TODO: Too long result (as inherited from the Python library)
 }
 
-void _print_tokens(Shlex lexer) {
+void _printTokens(Shlex lexer) {
     while (true) {
-        Nullable!string tt = lexer.get_token();
+        Nullable!string tt = lexer.getToken();
         if (!tt.isNull && !tt.empty) break; // TODO: can simplify?
         writeln("Token: " ~ tt);
     }
