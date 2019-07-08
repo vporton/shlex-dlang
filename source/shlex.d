@@ -35,8 +35,6 @@ import std.file;
 import std.path;
 import std.stdio : write, writeln;
 
-// FIXME: camelCase
-
 // TODO: use moveFront()/moveBack()
 
 alias ShlexStream = InputRange!dchar; // Unicode stream
@@ -116,7 +114,7 @@ private:
     Nullable!dchar state = ' '; // a little inefficient?
     auto pushback = DList!string(); // may be not the fastest
     uint lineno;
-    ubyte debug_ = 3; // FIXME: Should be 0 by default
+    ubyte debug_ = 0;
     string token = "";
     auto filestack = DList!(Tuple!(Nullable!string, ShlexStream, uint))(); // may be not the fastest
     Nullable!string source; // TODO: Represent no source just as an empty string?
