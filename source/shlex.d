@@ -123,7 +123,7 @@ private:
     auto _pushbackChars = DList!dchar(); // may be not the fastest
 
 public:
-    // @disable this();
+    @disable this();
 
     /** We don't support implicit stdin as `instream` as in Python. */
     this(ShlexStream instream,
