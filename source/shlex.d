@@ -37,7 +37,7 @@ import std.stdio : write, writeln;
 
 // TODO: use moveFront()/moveBack()
 
-alias ShlexStream = InputRange!dchar; // Unicode stream
+alias ShlexStream = InputRange!(const dchar); // Unicode stream
 
 class ShlexFile : InputRange!dchar {
     private string text;
@@ -154,7 +154,7 @@ public:
     {
         import std.conv;
         // TODO: Inefficient to convert to dstring in memory.
-        this(cast (ShlexStream)inputRangeObject(instream.dtext), infile, posix, punctuationChars);
+        this(cast (ShlexStream)inputRangeObject(cast (const dchar[])instream.dtext), infile, posix, punctuationChars);
     }
 
     void dump() {
