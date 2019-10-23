@@ -11,10 +11,11 @@ import shlex;
 void main(string[] args)
 {
     if (args.length == 1)
-        _printTokens(*new Shlex(stdin.byLine.join));
+        _printTokens(*new Shlex(stdin.byLine(Yes.keepTerminator).join));
     else {
         immutable filename = args[1];
         scope File file = File(filename, "r");
-        _printTokens(*new Shlex(file.byLine.join, Nullable!string(filename)));
+        _printTokens(*new Shlex(file.byLine(Yes.keepTerminator).join,
+                                Nullable!string(filename)));
     }
 }

@@ -88,7 +88,8 @@ class ShlexFile : InputRange!dchar {
 }
 
 private void skipLine(ShlexStream stream) {
-    while (!stream.empty && stream.front == '\n') stream.popFront();
+    while (!stream.empty && stream.front != '\n') stream.popFront();
+    if (!stream.empty && stream.front == '\n') stream.popFront();
 }
 
 /// A lexical analyzer class for simple shell-like syntaxes
@@ -296,7 +297,7 @@ public:
                 } else if (whitespace.canFind(nextchar.get)) {
                     if (debug_ >= 2)
                         writeln("shlex: I see whitespace in whitespace state");
-                    if (token || (posix && quoted))
+                    if ((token && !token.empty) || (posix && quoted))
                         break;   // emit current token
                     else
                         continue;
