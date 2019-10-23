@@ -360,8 +360,6 @@ public:
                 token ~= nextchar;
                 state = escapedstate;
             } else if (!state.isNull && (state.get == 'a' || state.get == 'c')) {
-                write("1: "); dump();
-                writeln("nextchar=", nextchar);
                 if (nextchar.isNull) {
                     state = Nullable!dchar();   // end of file
                     break;
@@ -398,7 +396,6 @@ public:
                     escapedstate = 'a';
                     state = nextchar;
                 } else if (wordchars.canFind(nextchar.get) || quotes.canFind(nextchar.get) || whitespaceSplit) {
-                    write("2: "); dump(); // TODO: not reached
                     token ~= nextchar;
                 } else {
                     if (punctuationChars.empty)
@@ -504,7 +501,7 @@ unittest {
 void _printTokens(Shlex lexer) {
     while (true) {
         Nullable!string tt = lexer.getToken();
-        if (!tt.isNull && !tt.empty) break; // TODO: can simplify?
+        if (tt.isNull || tt.empty) break; // TODO: can simplify?
         writeln("Token: " ~ tt);
     }
 }
