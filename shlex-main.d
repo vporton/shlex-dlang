@@ -7,7 +7,7 @@ import std.utf;
 import std.array;
 import shlex;
 
-// TODO: byLine is inefficeint
+// TODO: byLine is inefficient.
 void main(string[] args)
 {
     if (args.length == 1)
