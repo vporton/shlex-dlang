@@ -256,7 +256,6 @@ public:
         while (true) {
             auto r = getToken();
             if (r.isNull) break;
-            writeln("Got ", r);
             result = dg(r.get);
             if (result) break;
         }
@@ -272,7 +271,7 @@ public:
                 write("Iteration ");
                 dump();
             }
-            Nullable!dchar nextchar; // FIXME: check if == works correctly below
+            Nullable!dchar nextchar;
             if (!punctuationChars.empty && !_pushbackChars.empty) {
                 nextchar = _pushbackChars.back;
                 _pushbackChars.removeBack();
@@ -287,7 +286,7 @@ public:
             if (debug_ >= 3)
                 writeln("shlex: in state %s I see character: %s".format(state, nextchar));
             if (state.isNull) {
-                // FIXME: This is never reached.
+                // TODO: Debugger shows that this is never reached. Is this code needed?
                 token = "";        // past end of file
                 break;
             } else if (state == ' ') {
@@ -326,7 +325,7 @@ public:
                     else
                         continue;
                 }
-            } else if (quotes.canFind(state)) { // FIXME: None
+            } else if (!state.isNull && quotes.canFind(state)) {
                 quoted = true;
                 if (nextchar.isNull) {      // end of file
                     if (debug_ >= 2)
@@ -347,7 +346,7 @@ public:
                     state = nextchar;
                 } else
                     token ~= nextchar;
-            } else if (escape.canFind(state)) { // FIXME: None
+            } else if (!state.isNull && escape.canFind(state)) {
                 if (nextchar.isNull) {      // end of file
                     if (debug_ >= 2)
                         writeln("shlex: I see EOF in escape state");
