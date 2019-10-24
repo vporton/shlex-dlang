@@ -446,16 +446,6 @@ public:
             lineno = this.lineno;
         return "\"%s\", line %d: ".format(infile, lineno);
     }
-
-    // TODO:
-    //Range opSlice();
-
-    // TODO: Can't directly translate from Python:
-    //def __next__(self):
-    //    token = self.get_token()
-    //    if token == self.eof:
-    //        raise StopIteration
-    //    return token
 }
 
 string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {
