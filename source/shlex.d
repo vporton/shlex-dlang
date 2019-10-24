@@ -216,7 +216,7 @@ public:
             pushback.removeFront();
             if (debug_ >= 1)
                 writeln("shlex: popping token " ~ tok);
-            return Nullable!string(tok);
+            return nullable(tok);
         }
         // No pushback.  Get a token.
         Nullable!string raw = readToken();
@@ -227,7 +227,7 @@ public:
                 if (!spec.empty) {
                     auto newfile   = spec[0];
                     auto newstream = spec[1];
-                    pushSource(newstream, Nullable!string(newfile));
+                    pushSource(newstream, nullable(newfile));
                 }
                 raw = getToken();
             }
@@ -291,7 +291,7 @@ public:
                 break;
             } else if (state == ' ') {
                 if (nextchar.isNull) {
-                    state = Nullable!dchar();  // end of file
+                    state.nullify();  // end of file
                     break;
                 } else if (whitespace.canFind(nextchar.get)) {
                     if (debug_ >= 2)
@@ -361,7 +361,7 @@ public:
                 state = escapedstate;
             } else if (!state.isNull && (state.get == 'a' || state.get == 'c')) {
                 if (nextchar.isNull) {
-                    state = Nullable!dchar();   // end of file
+                    state.nullify();   // end of file
                     break;
                 } else if (whitespace.canFind(nextchar.get)) {
                     if (debug_ >= 2)
@@ -416,7 +416,7 @@ public:
         //writeln('['~token~']');
         token = "";
         if (posix && !quoted && result == "")
-            result = Nullable!string();
+            result.nullify();
         if (debug_ > 1) {
             if (!result.isNull && !result.empty) // TODO: can simplify?
                 writeln("shlex: raw token=" ~ result);
