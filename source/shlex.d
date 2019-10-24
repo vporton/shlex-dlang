@@ -29,11 +29,22 @@ import std.regex;
 import std.array;
 import std.range.interfaces;
 import std.range.primitives;
+import std.container;
 import std.container.dlist;
 import std.algorithm;
 import std.file;
 import std.path;
 import std.stdio : write, writeln;
+
+template TypeTupleOf(alias R) if (isInputRange!(typeof(R))) {
+    import std.typetuple : TT = TypeTuple;
+    import std.array, std.range : isInputRange, dropOne;
+    static if (R.empty)
+        alias TypeTupleOf = TT!();
+    else
+        alias TypeTupleOf = TT!(R.front(), TypeTupleOf!(R.dropOne()));
+}
+
 
 // TODO: use moveFront()/moveBack()
 
@@ -95,7 +106,7 @@ private void skipLine(ShlexStream stream) {
 /// A lexical analyzer class for simple shell-like syntaxes
 struct Shlex {
     alias Posix = Flag!"posix";
-    alias PunctuationChars = Flag!"punctuationChars";
+    alias PunctuationChars = Flag!"PunctuationChars";
     alias Comments = Flag!"comments";
 
 private:
@@ -105,13 +116,13 @@ private:
     Posix posix;
     Nullable!string eof; // seems not efficient
     //bool delegate(string token) isEof;
-    string commenters = "#";
-    string wordchars;
-    static immutable whitespace = " \t\r\n";
+    auto commenters = new RedBlackTree!(immutable dchar)("#");
+    RedBlackTree!(immutable dchar) wordchars;
+    static immutable whitespace = new RedBlackTree!(immutable dchar)(" \t\r\n");
     bool whitespaceSplit = false;
-    static immutable quotes = "'\"";
-    static immutable escape = "\\"; // char or string?
-    static immutable escapedquotes = "\""; // char or string?
+    static immutable quotes = new RedBlackTree!(immutable dchar)("'\"");
+    static immutable escape = new RedBlackTree!(immutable dchar)("\\"); // char or string?
+    static immutable escapedquotes = new RedBlackTree!(immutable dchar)("\""); // char or string?
     Nullable!dchar state = ' '; // a little inefficient?
     auto pushback = DList!string(); // may be not the fastest
     uint lineno;
@@ -119,7 +130,7 @@ private:
     string token = "";
     auto filestack = DList!(Tuple!(Nullable!string, ShlexStream, uint))(); // may be not the fastest
     Nullable!string source; // TODO: Represent no source just as an empty string?
-    string punctuationChars;
+    auto punctuationChars = new RedBlackTree!(immutable dchar)();
     // _pushbackChars is a push back queue used by lookahead logic
     auto _pushbackChars = DList!dchar(); // may be not the fastest
 
@@ -130,30 +141,30 @@ public:
     this(ShlexStream instream,
          Nullable!string infile = Nullable!string.init,
          Posix posix = No.posix,
-         PunctuationChars punctuationChars = No.punctuationChars)
+         PunctuationChars punctuationCharsFlag = No.PunctuationChars)
     {
         this.instream = instream;
         this.infile = infile;
         this.posix = posix;
         if (!posix) eof = "";
-        wordchars = "abcdfeghijklmnopqrstuvwxyz" ~ "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
+        wordchars = new RedBlackTree!(immutable dchar)("abcdfeghijklmnopqrstuvwxyz" ~ "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
         if (posix)
-            wordchars ~= "ßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" ~ "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ";
+            wordchars.stableInsert("ßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" ~ "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ");
         lineno = 1;
-        this.punctuationChars = punctuationChars ? "();<>|&" : "";
-        if (punctuationChars) {
+        this.punctuationChars.stableInsert(punctuationChars ? "();<>|&" : "");
+        if (punctuationCharsFlag) {
             // these chars added because allowed in file names, args, wildcards
-            wordchars ~= "~-./*?=";
+            wordchars.stableInsert("~-./*?=");
             // remove any punctuation chars from wordchars
             // TODO: Isn't it better to use dstring?
-            wordchars = filter!(c => !this.punctuationChars.canFind(c))(wordchars).array.to!string;
+            wordchars = new RedBlackTree!(immutable dchar)(filter!(c => c !in punctuationChars)(wordchars.array));
         }
     }
 
     this(Stream)(Stream instream,
                  Nullable!string infile = Nullable!string.init,
                  Posix posix = No.posix,
-                 PunctuationChars punctuationChars = No.punctuationChars)
+                 PunctuationChars punctuationChars = No.PunctuationChars)
     {
         import std.conv;
         // TODO: Inefficient to convert to dstring in memory.
@@ -293,26 +304,26 @@ public:
                 if (nextchar.isNull) {
                     state.nullify();  // end of file
                     break;
-                } else if (whitespace.canFind(nextchar.get)) {
+                } else if (nextchar.get in whitespace) {
                     if (debug_ >= 2)
                         writeln("shlex: I see whitespace in whitespace state");
                     if ((token && !token.empty) || (posix && quoted))
                         break;   // emit current token
                     else
                         continue;
-                } else if (commenters.canFind(nextchar.get)) {
+                } else if (nextchar.get in commenters) {
                     instream.skipLine();
                     ++lineno;
-                } else if (posix && escape.canFind(nextchar.get)) {
+                } else if (posix && nextchar.get in escape) {
                     escapedstate = 'a';
                     state = nextchar;
-                } else if (wordchars.canFind(nextchar.get)) {
+                } else if (nextchar.get in wordchars) {
                     token = [nextchar.get].toUTF8;
                     state = 'a';
-                } else if (punctuationChars.canFind(nextchar.get)) {
+                } else if (nextchar.get in punctuationChars) {
                     token = [nextchar.get].toUTF8;
                     state = 'c';
-                } else if (quotes.canFind(nextchar.get)) {
+                } else if (nextchar.get in quotes) {
                     if (!posix) token = [nextchar.get].toUTF8;
                     state = nextchar;
                 } else if (whitespaceSplit) {
@@ -325,7 +336,7 @@ public:
                     else
                         continue;
                 }
-            } else if (!state.isNull && quotes.canFind(state)) {
+            } else if (!state.isNull && state in quotes) {
                 quoted = true;
                 if (nextchar.isNull) {      // end of file
                     if (debug_ >= 2)
@@ -340,13 +351,13 @@ public:
                         break;
                     } else
                         state = 'a';
-                } else if (posix && !nextchar.isNull && escape.canFind(nextchar.get) &&
-                        !state.isNull && escapedquotes.canFind(state.get)) {
+                } else if (posix && !nextchar.isNull && nextchar.get in escape &&
+                        !state.isNull && state.get in escapedquotes) {
                     escapedstate = state;
                     state = nextchar;
                 } else
                     token ~= nextchar;
-            } else if (!state.isNull && escape.canFind(state)) {
+            } else if (!state.isNull && state in escape) {
                 if (nextchar.isNull) {      // end of file
                     if (debug_ >= 2)
                         writeln("shlex: I see EOF in escape state");
@@ -355,7 +366,7 @@ public:
                 }
                 // In posix shells, only the quote itself or the escape
                 // character may be escaped within quotes.
-                if (quotes.canFind(escapedstate) && nextchar != state && nextchar != escapedstate)
+                if (escapedstate in quotes && nextchar != state && nextchar != escapedstate)
                     token ~= state;
                 token ~= nextchar;
                 state = escapedstate;
@@ -363,7 +374,7 @@ public:
                 if (nextchar.isNull) {
                     state.nullify();   // end of file
                     break;
-                } else if (whitespace.canFind(nextchar.get)) {
+                } else if (nextchar.get in whitespace) {
                     if (debug_ >= 2)
                         writeln("shlex: I see whitespace in word state");
                     state = ' ';
@@ -371,7 +382,7 @@ public:
                         break;   // emit current token
                     else
                         continue;
-                } else if (commenters.canFind(nextchar.get)) {
+                } else if (nextchar.get in commenters) {
                     instream.skipLine();
                     ++lineno;
                     if (posix) {
@@ -382,20 +393,20 @@ public:
                             continue;
                     }
                 } else if (state == 'c') {
-                    if (punctuationChars.canFind(nextchar.get))
+                    if (nextchar.get in punctuationChars)
                         token ~= nextchar;
                     else {
-                        if (!whitespace.canFind(nextchar.get))
+                        if (!nextchar.get in whitespace)
                             _pushbackChars.insertBack(nextchar);
                         state = ' ';
                         break;
                     }
-                } else if (posix && quotes.canFind(nextchar.get))
+                } else if (posix && nextchar.get in quotes)
                     state = nextchar;
-                else if (posix && escape.canFind(nextchar.get)) {
+                else if (posix && nextchar.get in escape) {
                     escapedstate = 'a';
                     state = nextchar;
-                } else if (wordchars.canFind(nextchar.get) || quotes.canFind(nextchar.get) || whitespaceSplit) {
+                } else if (nextchar.get in wordchars || nextchar.get in quotes || whitespaceSplit) {
                     token ~= nextchar;
                 } else {
                     if (punctuationChars.empty)
@@ -452,7 +463,7 @@ string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posi
     scope Shlex lex = Shlex(s, Nullable!string.init, posix); // TODO: shorten
     lex.whitespaceSplit = true;
     if (!comments)
-        lex.commenters = "";
+        lex.commenters.clear();
     return lex.array;
 }
 
