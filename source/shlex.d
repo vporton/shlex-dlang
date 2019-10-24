@@ -36,16 +36,6 @@ import std.file;
 import std.path;
 import std.stdio : write, writeln;
 
-template TypeTupleOf(alias R) if (isInputRange!(typeof(R))) {
-    import std.typetuple : TT = TypeTuple;
-    import std.array, std.range : isInputRange, dropOne;
-    static if (R.empty)
-        alias TypeTupleOf = TT!();
-    else
-        alias TypeTupleOf = TT!(R.front(), TypeTupleOf!(R.dropOne()));
-}
-
-
 // TODO: use moveFront()/moveBack()
 
 alias ShlexStream = InputRange!(const dchar); // Unicode stream
