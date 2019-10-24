@@ -13,6 +13,7 @@
 
 # Executables
 *.exe
+shlex
 
 # DUB
 .dub

@@ -11,7 +11,7 @@
     {
       "name": "library",
       "description": "Shlex library",
-      "tagetName": "library",
+      "targetName": "shlex",
       "configurations": [
         {
           "name": "application",
@@ -33,7 +33,7 @@
     {
       "name": "shlex",
       "description": "Shlex lexer (test)",
-      "tagetName": "shlex",
+      "targetName": "shlex",
       "configurations": [
         {
           "name": "application",
