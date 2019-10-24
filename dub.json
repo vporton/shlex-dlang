@@ -28,7 +28,10 @@
           "name": "static-library",
           "targetType": "staticLibrary"
         }
-      ]
+      ],
+      "dependencies": {
+        "pure-dependency-injector": "~>0.9.5"	
+      }
     },
     {
       "name": "shlex",
