@@ -151,7 +151,8 @@ public:
         if (posix)
             wordchars.stableInsert("ßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" ~ "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ");
         lineno = 1;
-        this.punctuationChars.stableInsert(punctuationChars ? "();<>|&" : "");
+        if(punctuationCharsFlag)
+            this.punctuationChars.stableInsert("();<>|&");
         if (punctuationCharsFlag) {
             // these chars added because allowed in file names, args, wildcards
             wordchars.stableInsert("~-./*?=");
