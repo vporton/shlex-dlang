@@ -128,7 +128,7 @@ public:
 
     /** We don't support implicit stdin as `instream` as in Python. */
     this(ShlexStream instream,
-         Nullable!string infile = Nullable!string(),
+         Nullable!string infile = Nullable!string.init,
          Posix posix = No.posix,
          PunctuationChars punctuationChars = No.punctuationChars)
     {
@@ -151,7 +151,7 @@ public:
     }
 
     this(Stream)(Stream instream,
-                 Nullable!string infile = Nullable!string(),
+                 Nullable!string infile = Nullable!string.init,
                  Posix posix = No.posix,
                  PunctuationChars punctuationChars = No.punctuationChars)
     {
@@ -175,12 +175,12 @@ public:
     }
 
     /** Push an input source onto the lexer's input source stack. */
-    void pushSource(Stream)(Stream newstream, Nullable!string newfile = Nullable!string()) {
+    void pushSource(Stream)(Stream newstream, Nullable!string newfile = Nullable!string.init) {
         pushSource(inputRangeObject(instream), newfile);
     }
 
     /** Push an input source onto the lexer's input source stack. */
-    void pushSource(ShlexStream newstream, Nullable!string newfile = Nullable!string()) {
+    void pushSource(ShlexStream newstream, Nullable!string newfile = Nullable!string.init) {
         filestack.insertFront(tuple(this.infile, this.instream, this.lineno));
         this.infile = newfile;
         this.instream = newstream;
@@ -437,8 +437,8 @@ public:
     }
 
     /** Emit a C-compiler-like, Emacs-friendly error-message leader. */
-    string errorLeader(Nullable!string infile = Nullable!string(),
-                        Nullable!uint lineno=Nullable!uint())
+    string errorLeader(Nullable!string infile = Nullable!string.init,
+                        Nullable!uint lineno=Nullable!uint.init)
     {
         if (infile.isNull)
             infile = this.infile;
@@ -449,7 +449,7 @@ public:
 }
 
 string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {
-    scope Shlex lex = Shlex(s, Nullable!string(), posix); // TODO: shorten
+    scope Shlex lex = Shlex(s, Nullable!string.init, posix); // TODO: shorten
     lex.whitespaceSplit = true;
     if (!comments)
         lex.commenters = "";
