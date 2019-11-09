@@ -490,6 +490,7 @@ template ShlexProviderStream(Stream) {
     ShlexParams, shlexDefaults);
 }
 
+// TODO: Use dependency injection.
 string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {
     scope Shlex lex = Shlex(s, Nullable!string.init, posix); // TODO: shorten
     lex.whitespaceSplit = true;
