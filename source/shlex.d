@@ -35,6 +35,8 @@ import std.algorithm;
 import std.file;
 import std.path;
 import std.stdio : write, writeln;
+import pure_dependency.providers;
+import struct_params;
 
 // TODO: use moveFront()/moveBack()
 
@@ -100,7 +102,6 @@ struct Shlex {
     alias Comments = Flag!"comments";
 
 private:
-    // TODO: Python shlex has some of the following as public instance variables (also check visibility of member functions)
     ShlexStream instream;
     Nullable!string infile;
     Posix posix;
@@ -131,11 +132,13 @@ public:
     this(ShlexStream instream,
          Nullable!string infile = Nullable!string.init,
          Posix posix = No.posix,
-         PunctuationChars punctuationCharsFlag = No.PunctuationChars)
+         PunctuationChars punctuationCharsFlag = No.PunctuationChars,
+         bool whitespaceSplit = false)
     {
         this.instream = instream;
         this.infile = infile;
         this.posix = posix;
+        this.whitespaceSplit = whitespaceSplit;
         if (!posix) eof = "";
         wordchars = new RedBlackTree!(immutable dchar)("abcdfeghijklmnopqrstuvwxyz" ~ "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
         if (posix)
@@ -155,11 +158,12 @@ public:
     this(Stream)(Stream instream,
                  Nullable!string infile = Nullable!string.init,
                  Posix posix = No.posix,
-                 PunctuationChars punctuationChars = No.PunctuationChars)
+                 PunctuationChars punctuationChars = No.PunctuationChars,
+                 bool whitespaceSplit = false)
     {
         import std.conv;
         // TODO: Inefficient to convert to dstring in memory.
-        this(cast (ShlexStream)inputRangeObject(cast (const dchar[])instream.dtext), infile, posix, punctuationChars);
+        this(cast (ShlexStream)inputRangeObject(cast (const dchar[])instream.dtext), infile, posix, punctuationChars, whitespaceSplit);
     }
 
     void dump() {
@@ -448,6 +452,42 @@ public:
             lineno = this.lineno;
         return "\"%s\", line %d: ".format(infile, lineno);
     }
+}
+
+mixin StructParams!("ShlexParams",
+                    ShlexStream, "instream",
+                    Nullable!string, "infile",
+                    Shlex.Posix, "posix",
+                    Shlex.PunctuationChars, "punctuationCharsFlag",
+                    bool, "whitespaceSplit");
+private ShlexParams.WithDefaults shlexDefaults = { infile: Nullable!string.init,
+                                                   posix: No.posix,
+                                                   punctuationCharsFlag: No.PunctuationChars,
+                                                   whitespaceSplit: false };
+alias ShlexProvider = ProviderWithDefaults!(Callable!(
+    (ShlexStream instream, Nullable!string infile,
+     Shlex.Posix posix,
+     Shlex.PunctuationChars punctuationCharsFlag,
+     bool whitespaceSplit) => new Shlex(instream, infile, posix, punctuationCharsFlag, whitespaceSplit)),
+    ShlexParams, shlexDefaults);
+
+template ShlexProviderStream(Stream) {
+    mixin StructParams!("ShlexParams",
+                        Stream, "instream",
+                        Nullable!string, "infile",
+                        Shlex.Posix, "posix",
+                        Shlex.PunctuationChars, "punctuationCharsFlag",
+                        bool, "whitespaceSplit");
+    private ShlexParams.WithDefaults shlexDefaults = { infile: Nullable!string.init,
+                                                       posix: No.posix,
+                                                       punctuationCharsFlag: No.PunctuationChars,
+                                                       whitespaceSplit: false };
+    alias ShlexProvider = ProviderWithDefaults!(Callable!(
+        (Stream instream, Nullable!string infile,
+         Shlex.Posix posix,
+         Shlex.PunctuationChars punctuationCharsFlag,
+        bool whitespaceSplit) => new Shlex(instream, infile, posix, punctuationCharsFlag, whitespaceSplit)),
+    ShlexParams, shlexDefaults);
 }
 
 string[] split(string s, Shlex.Comments comments = No.comments, Shlex.Posix posix = Yes.posix) {

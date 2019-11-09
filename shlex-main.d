@@ -20,6 +20,12 @@ void main(string[] args)
     else {
         immutable filename = args[1];
         scope File file = File(filename, "r");
-        _printTokens(*new Shlex(file.readFile, nullable(filename)));
+
+        auto provider = new ShlexProviderStream!(char[]).ShlexProvider;
+        ShlexProviderStream!(char[]).ShlexParams.WithDefaults params = {instream: file.readFile, infile: nullable(filename)};
+        Shlex *shlex = provider.callWithDefaults(params);
+
+        //_printTokens(*new Shlex(file.readFile, nullable(filename)));
+        _printTokens(shlex);
     }
 }

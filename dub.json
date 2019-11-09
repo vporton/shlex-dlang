@@ -30,7 +30,7 @@
         }
       ],
       "dependencies": {
-        "pure-dependency-injector": "~>0.9.5"	
+        "pure-dependency-injector": ">=0.9.14"
       }
     },
     {
