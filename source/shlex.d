@@ -169,7 +169,7 @@ public:
     void dump() {
         if (debug_ >= 3) {
 //            writeln("state='", state, "\' nextchar='", nextchar, "\' token='", token, '\'');
-            writeln("state='", state, "\' token='", token, '\'');
+            writeln("state='", state.get(), "\' token='", token, '\'');
         }
     }
 
@@ -227,9 +227,9 @@ public:
         // No pushback.  Get a token.
         Nullable!string raw = readToken();
         // Handle inclusions
-        if (!source.isNull && !source.empty) {
+        if (!source.isNull && !source.get().empty) {
             while (raw == source) {
-                auto spec = sourcehook(readToken());
+                auto spec = sourcehook(readToken().get());
                 if (!spec.empty) {
                     auto newfile   = spec[0];
                     auto newstream = spec[1];
@@ -290,12 +290,12 @@ public:
             if (nextchar == '\n')
                 ++lineno;
             if (debug_ >= 3)
-                writeln("shlex: in state %s I see character: %s".format(state, nextchar));
+                writeln("shlex: in state %s I see character: s".format(state.get(), nextchar));
             if (state.isNull) {
                 // TODO: Debugger shows that this is never reached. Is this code needed?
                 token = "";        // past end of file
                 break;
-            } else if (state == ' ') {
+            } else if (state.get() == ' ') {
                 if (nextchar.isNull) {
                     state.nullify();  // end of file
                     break;
@@ -311,7 +311,7 @@ public:
                     ++lineno;
                 } else if (posix && nextchar.get in escape) {
                     escapedstate = 'a';
-                    state = nextchar;
+                    state = nextchar.get();
                 } else if (nextchar.get in wordchars) {
                     token = [nextchar.get].toUTF8;
                     state = 'a';
@@ -320,7 +320,7 @@ public:
                     state = 'c';
                 } else if (nextchar.get in quotes) {
                     if (!posix) token = [nextchar.get].toUTF8;
-                    state = nextchar;
+                    state = nextchar.get();
                 } else if (whitespaceSplit) {
                     token = [nextchar.get].toUTF8;
                     state = 'a';
@@ -331,7 +331,7 @@ public:
                     else
                         continue;
                 }
-            } else if (!state.isNull && state in quotes) {
+            } else if (!state.isNull && state.get() in quotes) {
                 quoted = true;
                 if (nextchar.isNull) {      // end of file
                     if (debug_ >= 2)
@@ -339,20 +339,20 @@ public:
                     // XXX what error should be raised here?
                     throw new Exception("No closing quotation");
                 }
-                if (nextchar == state) {
+                if (nextchar.get() == state.get()) {
                     if (!posix) {
-                        token ~= nextchar;
+                        token ~= nextchar.get();
                         state = ' ';
                         break;
                     } else
                         state = 'a';
                 } else if (posix && !nextchar.isNull && nextchar.get in escape &&
                         !state.isNull && state.get in escapedquotes) {
-                    escapedstate = state;
-                    state = nextchar;
+                    escapedstate = state.get();
+                    state = nextchar.get();
                 } else
-                    token ~= nextchar;
-            } else if (!state.isNull && state in escape) {
+                    token ~= nextchar.get();
+            } else if (!state.isNull && state.get() in escape) {
                 if (nextchar.isNull) {      // end of file
                     if (debug_ >= 2)
                         writeln("shlex: I see EOF in escape state");
@@ -361,9 +361,9 @@ public:
                 }
                 // In posix shells, only the quote itself or the escape
                 // character may be escaped within quotes.
-                if (escapedstate in quotes && nextchar != state && nextchar != escapedstate)
-                    token ~= state;
-                token ~= nextchar;
+                if (escapedstate in quotes && nextchar.get() != state.get() && nextchar.get() != escapedstate)
+                    token ~= state.get();
+                token ~= nextchar.get();
                 state = escapedstate;
             } else if (!state.isNull && (state.get == 'a' || state.get == 'c')) {
                 if (nextchar.isNull) {
@@ -389,25 +389,25 @@ public:
                     }
                 } else if (state == 'c') {
                     if (nextchar.get in punctuationChars)
-                        token ~= nextchar;
+                        token ~= nextchar.get();
                     else {
                         if (!nextchar.get in whitespace)
-                            _pushbackChars.insertBack(nextchar);
+                            _pushbackChars.insertBack(nextchar.get());
                         state = ' ';
                         break;
                     }
                 } else if (posix && nextchar.get in quotes)
-                    state = nextchar;
+                    state = nextchar.get();
                 else if (posix && nextchar.get in escape) {
                     escapedstate = 'a';
-                    state = nextchar;
+                    state = nextchar.get();
                 } else if (nextchar.get in wordchars || nextchar.get in quotes || whitespaceSplit) {
-                    token ~= nextchar;
+                    token ~= nextchar.get();
                 } else {
                     if (punctuationChars.empty)
                         pushback.insertFront(nextchar.get.to!string);
                     else
-                        _pushbackChars.insertBack(nextchar);
+                        _pushbackChars.insertBack(nextchar.get());
                     if (debug_ >= 2)
                         writeln("shlex: I see punctuation in word state");
                     state = ' ';
@@ -424,7 +424,7 @@ public:
         if (posix && !quoted && result == "")
             result.nullify();
         if (debug_ > 1) {
-            if (!result.isNull && !result.empty) // TODO: can simplify?
+            if (!result.isNull && !result.get().empty) // TODO: can simplify?
                 writeln("shlex: raw token=" ~ result);
             else
                 writeln("shlex: raw token=EOF");
@@ -438,7 +438,7 @@ public:
             newfile = newfile[1..$-1];
         // This implements cpp-like semantics for relative-path inclusion.
         if (!isAbsolute(newfile))
-            newfile = buildPath(dirName(infile), newfile);
+            newfile = buildPath(dirName(infile.get()), newfile);
         return tuple(newfile, new ShlexFile(newfile));
     }
 
@@ -534,7 +534,7 @@ unittest {
 void _printTokens(Shlex lexer) {
     while (true) {
         Nullable!string tt = lexer.getToken();
-        if (tt.isNull || tt.empty) break; // TODO: can simplify?
+        if (tt.isNull || tt.get().empty) break; // TODO: can simplify?
         writeln("Token: " ~ tt);
     }
 }
