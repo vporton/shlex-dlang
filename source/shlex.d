@@ -250,7 +250,7 @@ public:
         // Neither inclusion nor EOF
         if (debug_ >= 1) {
             if (eof != raw)
-                writeln("shlex: token=" ~ raw);
+                writeln("shlex: token=" ~ raw.get);
             else
                 writeln("shlex: token=EOF");
         }
@@ -425,7 +425,7 @@ public:
             result.nullify();
         if (debug_ > 1) {
             if (!result.isNull && !result.get().empty) // TODO: can simplify?
-                writeln("shlex: raw token=" ~ result);
+                writeln("shlex: raw token=" ~ result.get);
             else
                 writeln("shlex: raw token=EOF");
         }
@@ -535,7 +535,7 @@ void _printTokens(Shlex lexer) {
     while (true) {
         Nullable!string tt = lexer.getToken();
         if (tt.isNull || tt.get().empty) break; // TODO: can simplify?
-        writeln("Token: " ~ tt);
+        writeln("Token: " ~ tt.get);
     }
 }
 
